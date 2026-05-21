@@ -1,0 +1,27 @@
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+export const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:4000";
+
+export const ADMIN_SECRET =
+  process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
+
+export const WATERING_COOLDOWN_MS = 3000;
+
+export const MAX_ACTIVITY_ENTRIES = 30;
+
+export const PARTICLE_COUNT = {
+  low: 120,
+  medium: 280,
+  high: 500,
+};
+
+export const CREATURE_LIMITS = {
+  butterflies: 6,
+  moths: 4,
+  jellyfish: 5,
+  fireflies: 12,
+  birds: 3,
+  spores: 8,
+};

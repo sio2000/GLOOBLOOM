@@ -1,0 +1,15 @@
+node_modules/
+.pgdata/
+backend/prisma/**/*.db
+backend/prisma/**/*.db-journal
+frontend/.next/
+frontend/out/
+dist/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+.cursor/

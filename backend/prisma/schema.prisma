@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organism {
+  id             String     @id @default(uuid())
+  hydration      Float      @default(50)
+  growth         Float      @default(8)
+  decay          Float      @default(0)
+  mutationLevel  Int        @default(0)
+  beautyLevel    Float      @default(15)
+  biodiversity   Float      @default(5)
+  ecosystemStage Int        @default(1)
+  mood           String     @default("thirsty")
+  season         String     @default("bloom")
+  totalWaterings Int        @default(0)
+  totalUsers     Int        @default(0)
+  lastWatered    DateTime   @default(now())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  waterings      Watering[]
+  leaves         Leaf[]
+  creatures      Creature[]
+
+  @@map("organisms")
+}
+
+model Watering {
+  id         String   @id @default(uuid())
+  organismId String
+  organism   Organism @relation(fields: [organismId], references: [id], onDelete: Cascade)
+  username   String   @default("Anonymous")
+  amount     Float    @default(10)
+  sessionId  String
+  createdAt  DateTime @default(now())
+
+  @@map("waterings")
+}
+
+model Leaf {
+  id         String   @id @default(uuid())
+  organismId String
+  organism   Organism @relation(fields: [organismId], references: [id], onDelete: Cascade)
+  username   String
+  color      String   @default("#7fff7f")
+  posX       Float    @default(0)
+  posY       Float    @default(0)
+  posZ       Float    @default(0)
+  scale      Float    @default(1)
+  rotation   Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  @@map("leaves")
+}
+
+model Creature {
+  id         String   @id @default(uuid())
+  organismId String
+  organism   Organism @relation(fields: [organismId], references: [id], onDelete: Cascade)
+  type       String   // butterfly, moth, jellyfish, firefly, bird
+  spawnedAt  DateTime @default(now())
+  active     Boolean  @default(true)
+
+  @@map("creatures")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  type      String   // watering | bloom | mutation | decay | creature | season | milestone
+  message   String
+  username  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@map("activity_logs")
+}

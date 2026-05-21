@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gloobloom_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gloobloom
+      POSTGRES_PASSWORD: gloobloom_secret
+      POSTGRES_DB: gloobloom
+    ports:
+      - "5432:5432"
+    volumes:
+      - gloobloom_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gloobloom"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gloobloom_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://gloobloom:gloobloom_secret@postgres:5432/gloobloom
+      PORT: 4000
+      FRONTEND_URL: http://localhost:3000
+      NODE_ENV: production
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gloobloom_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_WS_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+
+volumes:
+  gloobloom_pgdata:

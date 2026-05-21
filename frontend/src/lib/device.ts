@@ -1,0 +1,70 @@
+/** Client-side device / viewport helpers for mobile framing & layout. */
+
+export interface DeviceViewport {
+  width: number;
+  height: number;
+  aspect: number;
+  isPortrait: boolean;
+  isMobile: boolean;
+  isPhone: boolean;
+  isTouch: boolean;
+}
+
+export function isMobileUserAgent(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
+
+export function isTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
+export function getDeviceViewport(): DeviceViewport {
+  if (typeof window === "undefined") {
+    return {
+      width: 390,
+      height: 844,
+      aspect: 390 / 844,
+      isPortrait: true,
+      isMobile: true,
+      isPhone: true,
+      isTouch: true,
+    };
+  }
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const isPortrait = height >= width;
+  const isTouch = isTouchDevice();
+  const uaMobile = isMobileUserAgent();
+  const narrow = Math.min(width, height) < 768;
+  const isMobile = uaMobile || (isTouch && narrow);
+  const isPhone = isMobile && Math.min(width, height) < 600;
+
+  return {
+    width,
+    height,
+    aspect: width / height,
+    isPortrait,
+    isMobile,
+    isPhone,
+    isTouch,
+  };
+}
+
+export function getDeviceMaxQualityTier(): "medium" | "high" {
+  if (typeof window === "undefined") return "medium";
+  const vp = getDeviceViewport();
+  if (vp.isMobile) return "medium";
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+  if (cores >= 8 && memory >= 8) return "high";
+  return "medium";
+}

@@ -1,0 +1,17 @@
+# Netlify — frontend (Next.js 14)
+# Connect repo at https://app.netlify.com → Import from Git → select GLOOBLOOM
+# Set env vars in Site settings → Environment variables (see README / frontend/.env.production.example)
+
+[build]
+  base = "frontend"
+  command = "npm ci && npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# SPA fallback not needed — Next.js plugin handles routing

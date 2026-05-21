@@ -1,0 +1,136 @@
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+import {
+  OrganismState,
+  ActivityEntry,
+  LeafData,
+  BloomEvent,
+  CreatureSpawnEvent,
+  MutationEvent,
+  RareEvent,
+  WateringEffect,
+} from "@/types/organism";
+
+interface WateringParticle {
+  id: string;
+  x: number;
+  y: number;
+  username: string;
+  timestamp: number;
+}
+
+interface OrganismStore {
+  state: OrganismState | null;
+  activities: ActivityEntry[];
+  leaves: LeafData[];
+  onlineCount: number;
+  isLoading: boolean;
+  isWatering: boolean;
+  wateringCooldown: boolean;
+  username: string;
+  showUsernameModal: boolean;
+  showWaterModal: boolean;
+  showLeafModal: boolean;
+  showAdminPanel: boolean;
+  pendingWateringEffects: WateringParticle[];
+  activeCreatures: { id: string; type: string; spawnedAt: number }[];
+  pendingBloom: BloomEvent | null;
+  pendingMutation: MutationEvent | null;
+  pendingRareEvent: RareEvent | null;
+  showNotification: { message: string; type: string } | null;
+
+  setState: (state: OrganismState) => void;
+  addActivity: (entry: ActivityEntry) => void;
+  setOnlineCount: (count: number) => void;
+  setIsLoading: (v: boolean) => void;
+  setIsWatering: (v: boolean) => void;
+  setWateringCooldown: (v: boolean) => void;
+  setUsername: (name: string) => void;
+  setShowUsernameModal: (v: boolean) => void;
+  setShowWaterModal: (v: boolean) => void;
+  setShowLeafModal: (v: boolean) => void;
+  setShowAdminPanel: (v: boolean) => void;
+  setLeaves: (leaves: LeafData[]) => void;
+  addWateringEffect: (effect: WateringParticle) => void;
+  removeWateringEffect: (id: string) => void;
+  addCreature: (creature: { id: string; type: string }) => void;
+  removeCreature: (id: string) => void;
+  setPendingBloom: (event: BloomEvent | null) => void;
+  setPendingMutation: (event: MutationEvent | null) => void;
+  setPendingRareEvent: (event: RareEvent | null) => void;
+  showNotif: (message: string, type?: string) => void;
+  clearNotif: () => void;
+}
+
+export const useOrganismStore = create<OrganismStore>()(
+  subscribeWithSelector((set, get) => ({
+    state: null,
+    activities: [],
+    leaves: [],
+    onlineCount: 0,
+    isLoading: true,
+    isWatering: false,
+    wateringCooldown: false,
+    username: "",
+    showUsernameModal: false,
+    showWaterModal: false,
+    showLeafModal: false,
+    showAdminPanel: false,
+    pendingWateringEffects: [],
+    activeCreatures: [],
+    pendingBloom: null,
+    pendingMutation: null,
+    pendingRareEvent: null,
+    showNotification: null,
+
+    setState: (state) => set({ state, isLoading: false }),
+
+    addActivity: (entry) =>
+      set((s) => ({
+        activities: [entry, ...s.activities].slice(0, 30),
+      })),
+
+    setOnlineCount: (count) => set({ onlineCount: count }),
+    setIsLoading: (v) => set({ isLoading: v }),
+    setIsWatering: (v) => set({ isWatering: v }),
+    setWateringCooldown: (v) => set({ wateringCooldown: v }),
+    setUsername: (name) => set({ username: name }),
+    setShowUsernameModal: (v) => set({ showUsernameModal: v }),
+    setShowWaterModal: (v) => set({ showWaterModal: v }),
+    setShowLeafModal: (v) => set({ showLeafModal: v }),
+    setShowAdminPanel: (v) => set({ showAdminPanel: v }),
+    setLeaves: (leaves) => set({ leaves }),
+
+    addWateringEffect: (effect) =>
+      set((s) => ({
+        pendingWateringEffects: [...s.pendingWateringEffects, effect].slice(-20),
+      })),
+
+    removeWateringEffect: (id) =>
+      set((s) => ({
+        pendingWateringEffects: s.pendingWateringEffects.filter((e) => e.id !== id),
+      })),
+
+    addCreature: (creature) =>
+      set((s) => ({
+        activeCreatures: [
+          ...s.activeCreatures,
+          { ...creature, spawnedAt: Date.now() },
+        ].slice(-15),
+      })),
+
+    removeCreature: (id) =>
+      set((s) => ({
+        activeCreatures: s.activeCreatures.filter((c) => c.id !== id),
+      })),
+
+    setPendingBloom: (event) => set({ pendingBloom: event }),
+    setPendingMutation: (event) => set({ pendingMutation: event }),
+    setPendingRareEvent: (event) => set({ pendingRareEvent: event }),
+
+    showNotif: (message, type = "info") =>
+      set({ showNotification: { message, type } }),
+
+    clearNotif: () => set({ showNotification: null }),
+  }))
+);

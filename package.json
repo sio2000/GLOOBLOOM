@@ -1,0 +1,22 @@
+{
+  "name": "gloobloom",
+  "version": "1.0.0",
+  "description": "A surreal global internet plant organism",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:app",
+    "dev:app": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"magenta,cyan\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:fresh": "npm run db:prepare && npm run dev:app",
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "db:prepare": "npm run prisma:push --prefix backend && npm run prisma:seed --prefix backend",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "npm run prisma:migrate --prefix backend",
+    "db:push": "npm run prisma:push --prefix backend",
+    "db:studio": "npm run prisma:studio --prefix backend",
+    "setup": "npm run install:all && npm run db:prepare"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
