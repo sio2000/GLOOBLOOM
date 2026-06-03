@@ -11,28 +11,7 @@ import {
   computeTrunkWalkWithMidPause,
   trunkRadiusAt,
 } from "@/lib/trunkWalker";
-import {
-  CATERPILLAR_BODY_LENGTH,
-  CaterpillarMesh,
-  type CaterpillarMotionPattern,
-} from "./InsectMeshes";
-
-/** Tail on bark; body grows outward along the trunk (never through the core). */
-function CaterpillarOnTrunkMesh({
-  pattern,
-  slow,
-}: {
-  pattern: CaterpillarMotionPattern;
-  slow?: boolean;
-}) {
-  return (
-    <group rotation={[0, 0, Math.PI / 2]}>
-      <group rotation={[Math.PI / 2, 0, 0]} position={[0.016, 0, 0]}>
-        <CaterpillarMesh pattern={pattern} slow={slow} />
-      </group>
-    </group>
-  );
-}
+import { CaterpillarMesh, type CaterpillarMotionPattern } from "./InsectMeshes";
 
 export function AnimatedCaterpillar({
   trunk,
@@ -61,8 +40,8 @@ export function AnimatedCaterpillar({
   const bodyRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const phase = (seed * 0.17) % 1;
-  const trunkClimb = mobileCrawl;
   const ySmooth = useRef((yMin + yMax) * 0.5);
+  const outwardLocal = useRef(new THREE.Vector3());
 
   useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
@@ -79,8 +58,8 @@ export function AnimatedCaterpillar({
 
     const stepWobble = Math.sin(walk.stepPhase + pattern * 0.7) * (mobileCrawl ? 0.01 : 0.006);
     const wobbleA = angle + stepWobble;
-    const radius = trunkClimb
-      ? caterpillarTrunkRadius(trunk, y, scale, CATERPILLAR_BODY_LENGTH)
+    const radius = mobileCrawl
+      ? caterpillarTrunkRadius(trunk, y, scale)
       : trunkRadiusAt(trunk, y, 0.012 * scale);
 
     ref.current.position.set(Math.cos(wobbleA) * radius, y, Math.sin(wobbleA) * radius);
@@ -95,12 +74,23 @@ export function AnimatedCaterpillar({
         walk.direction * walk.moveAmount * 0.13 + Math.sin(walk.stepPhase * 1.3) * 0.04;
       const bentTilt = crawlTilt * (1 - walk.posture);
       bodyRef.current.rotation.x = bentTilt;
-      bodyRef.current.rotation.z =
-        walk.posture * 0.22 + (trunkClimb ? -0.08 : 0);
-      bodyRef.current.position.y =
-        Math.abs(Math.sin(walk.stepPhase * 2.2)) * 0.003 * scale * walk.moveAmount;
-      if (trunkClimb) {
-        bodyRef.current.position.z = -0.006 * scale;
+      bodyRef.current.rotation.z = walk.posture * 0.22;
+
+      if (mobileCrawl) {
+        const outwardWorld = new THREE.Vector3(Math.cos(wobbleA), 0, Math.sin(wobbleA));
+        outwardLocal.current.copy(outwardWorld);
+        outwardLocal.current.applyAxisAngle(new THREE.Vector3(0, 1, 0), -(wobbleA + Math.PI / 2));
+        const cling = 0.022 * scale;
+        bodyRef.current.position.set(
+          outwardLocal.current.x * cling,
+          Math.abs(Math.sin(walk.stepPhase * 2.2)) * 0.003 * scale * walk.moveAmount,
+          outwardLocal.current.z * cling
+        );
+      } else {
+        bodyRef.current.position.y =
+          Math.abs(Math.sin(walk.stepPhase * 2.2)) * 0.003 * scale * walk.moveAmount;
+        bodyRef.current.position.x = 0;
+        bodyRef.current.position.z = 0;
       }
     }
   }, seed);
@@ -108,16 +98,10 @@ export function AnimatedCaterpillar({
   return (
     <group ref={ref} scale={scale}>
       <group ref={orientRef}>
-        <group ref={bodyRef}>
-          {trunkClimb ? (
-            <CaterpillarOnTrunkMesh pattern={pattern} slow={mobileCrawl} />
-          ) : (
-            <group rotation={[Math.PI / 2, 0, 0]}>
-              <group rotation={[0, -Math.PI / 2, 0]}>
-                <CaterpillarMesh pattern={pattern} slow={mobileCrawl} />
-              </group>
-            </group>
-          )}
+        <group ref={bodyRef} rotation={[Math.PI / 2, 0, 0]}>
+          <group rotation={[0, -Math.PI / 2, 0]}>
+            <CaterpillarMesh pattern={pattern} slow={mobileCrawl} />
+          </group>
         </group>
       </group>
     </group>
