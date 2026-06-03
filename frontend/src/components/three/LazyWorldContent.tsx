@@ -132,7 +132,7 @@ export function LazyWorldContent({
         </SceneVisibilityGate>
       )}
 
-      {perf.enableCreatures && phaseOk(3) && (
+      {perf.enableCreatures && phaseOk(2) && (
         <CreatureSystem
           stage={stage}
           hydration={hydration}

@@ -14,6 +14,7 @@ import {
 } from "@/lib/plantFlightAvoidance";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { scaledCount } from "@/lib/performance";
+import { scratchPosition } from "@/lib/creatureVisibility";
 
 interface Props {
   stage: number;
@@ -36,14 +37,18 @@ function Firefly({ seed, color, plantHeight, centerY, stage, growth }: { seed: n
     [seed, plantHeight, centerY, spd, stage, growth]
   );
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!ref.current || !matRef.current) return;
     const { pos } = sampleFlight(flight, clock);
+    if (!checkVisible(pos)) {
+      setVisible(ref.current, false);
+      return;
+    }
+    setVisible(ref.current, true);
     ref.current.position.copy(pos);
     const t = clock.elapsedTime * spd + phase;
-    // Blink: bright but NOT above bloom threshold (< 0.92)
     matRef.current.emissiveIntensity = Math.sin(t * 3.5 + phase) > 0.1 ? 0.70 : 0.06;
-  });
+  }, seed);
 
   return (
     <mesh ref={ref} castShadow>
@@ -73,16 +78,21 @@ function Dragonfly({ seed, color, plantHeight, centerY, stage, growth }: { seed:
     [seed, plantHeight, centerY, spd, stage, growth]
   );
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const { pos, yaw } = sampleFlight(flight, clock);
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
     const flap = Math.sin(clock.elapsedTime * 11 + phase) * 0.7;
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw;
     [w1, w2, w3, w4].forEach((w, i) => {
       if (w.current) w.current.rotation.y = (i < 2 ? 1 : -1) * flap * (i % 2 === 0 ? 1 : 0.8);
     });
-  });
+  }, seed);
 
   return (
     <group ref={grp}>
@@ -137,15 +147,20 @@ function Butterfly({ seed, color, accent, plantHeight, centerY, stage, growth }:
     [seed, plantHeight, centerY, spd, stage, growth]
   );
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const { pos, yaw } = sampleFlight(flight, clock);
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
     const flap = Math.sin(clock.elapsedTime * 4.5 + phase) * 0.65;
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw + Math.PI / 2;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
-  });
+  }, seed);
 
   return (
     <group ref={grp}>
@@ -188,15 +203,20 @@ function DreamMoth({ seed, color, plantHeight, centerY, stage, growth }: { seed:
     return g;
   }, []);
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const { pos, yaw } = sampleFlight(flight, clock);
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
     const flap = Math.sin(clock.elapsedTime * 4.5 + phase) * 0.55;
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw + Math.PI / 2;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
-  });
+  }, seed);
 
   return (
     <group ref={grp}>
@@ -227,18 +247,24 @@ function WillOWisp({ seed, color, plantHeight, centerY, flightBounds }: { seed: 
   const maxH  = plantHeight * (0.5 + (seed % 4) * 0.1);
   const r     = Math.max(1.8, 0.8 + (seed % 5) * 0.5 + plantHeight * 0.06);
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!ref.current || !matRef.current) return;
     const t = clock.elapsedTime * spd + phase;
-    ref.current.position.set(
-      Math.sin(t * 0.6) * r + Math.sin(t * 1.8 + 1.2) * r * 0.4,
-      centerY + 0.5 + ((clock.elapsedTime * spd * 0.3 + phase * 0.5) % maxH),
-      Math.cos(t * 0.6) * r + Math.cos(t * 2.1) * r * 0.3,
-    );
+    const px =
+      Math.sin(t * 0.6) * r + Math.sin(t * 1.8 + 1.2) * r * 0.4;
+    const py =
+      centerY + 0.5 + ((clock.elapsedTime * spd * 0.3 + phase * 0.5) % maxH);
+    const pz = Math.cos(t * 0.6) * r + Math.cos(t * 2.1) * r * 0.3;
+    if (!checkVisible(scratchPosition(px, py, pz))) {
+      setVisible(ref.current, false);
+      return;
+    }
+    setVisible(ref.current, true);
+    ref.current.position.set(px, py, pz);
     applyPlantAvoidance(ref.current.position, flightBounds);
-    // Pulse between bright and dim — never above 0.85
-    matRef.current.emissiveIntensity = 0.50 + Math.sin(clock.elapsedTime * 2.2 + phase) * 0.28;
-  });
+    matRef.current.emissiveIntensity =
+      0.50 + Math.sin(clock.elapsedTime * 2.2 + phase) * 0.28;
+  }, seed);
 
   return (
     <mesh ref={ref}>
@@ -260,15 +286,22 @@ function JellyfishSpore({ seed, color, plantHeight, centerY, flightBounds }: { s
   const startX = (seed % 7 - 3.5) * 1.2;
   const startZ = ((seed * 3) % 7 - 3.5) * 1.2;
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
-    grp.current.position.x = startX + Math.sin(t * 0.7) * 0.85;
-    grp.current.position.y = centerY + ((clock.elapsedTime * 0.07 * spd + phase * 0.5) % maxH) + 0.2;
-    grp.current.position.z = startZ + Math.cos(t * 0.6) * 0.85;
+    const px = startX + Math.sin(t * 0.7) * 0.85;
+    const py =
+      centerY + ((clock.elapsedTime * 0.07 * spd + phase * 0.5) % maxH) + 0.2;
+    const pz = startZ + Math.cos(t * 0.6) * 0.85;
+    if (!checkVisible(scratchPosition(px, py, pz))) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
+    grp.current.position.set(px, py, pz);
     grp.current.rotation.y = clock.elapsedTime * 0.12;
     applyPlantAvoidance(grp.current.position, flightBounds);
-  });
+  }, seed);
 
   return (
     <group ref={grp}>
@@ -309,22 +342,27 @@ function UFODisc({ seed, color, accent, plantHeight, centerY, flightBounds }: {
   const r     = Math.max(3.5, 2.2 + seed * 0.6 + plantHeight * 0.12);
   const orbitH = centerY + plantHeight * (0.55 + seed * 0.05);
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
-    grp.current.position.set(
+    const pos = scratchPosition(
       Math.cos(t) * r,
       orbitH + Math.sin(t * 0.3) * 0.8,
-      Math.sin(t) * r,
+      Math.sin(t) * r
     );
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
+    grp.current.position.copy(pos);
     applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t + Math.PI / 2;
     if (domeRef.current) {
-      // Dome pulses
       (domeRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
         0.4 + Math.sin(clock.elapsedTime * 2.5 + phase) * 0.2;
     }
-  });
+  }, seed);
 
   return (
     <group ref={grp}>
@@ -374,18 +412,32 @@ function CosmicBird({ seed, color, plantHeight, centerY, flightBounds }: { seed:
 
   const wingGeo = useMemo(() => new THREE.PlaneGeometry(0.32, 0.12, 5, 3), []);
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
-    const t    = clock.elapsedTime * spd + phase;
-    const flap = Math.sin(clock.elapsedTime * 2.8 + phase) * 0.38;
-    grp.current.position.set(
-      Math.cos(t) * r, orbitH + Math.sin(t * 0.3) * 0.8, Math.sin(t) * r,
+    const t = clock.elapsedTime * spd + phase;
+    const pos = scratchPosition(
+      Math.cos(t) * r,
+      orbitH + Math.sin(t * 0.3) * 0.8,
+      Math.sin(t) * r
     );
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
+    const flap = Math.sin(clock.elapsedTime * 2.8 + phase) * 0.38;
+    grp.current.position.copy(pos);
     applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t + Math.PI / 2;
-    if (wL.current) { wL.current.rotation.y = flap;  wL.current.rotation.z = -flap * 0.2; }
-    if (wR.current) { wR.current.rotation.y = -flap; wR.current.rotation.z = flap * 0.2; }
-  });
+    if (wL.current) {
+      wL.current.rotation.y = flap;
+      wL.current.rotation.z = -flap * 0.2;
+    }
+    if (wR.current) {
+      wR.current.rotation.y = -flap;
+      wR.current.rotation.z = flap * 0.2;
+    }
+  }, seed);
 
   return (
     <group ref={grp}>
@@ -416,16 +468,22 @@ function PlasmaRing({ seed, color, accent, plantHeight, centerY, flightBounds }:
   const r     = Math.max(3.2, 1.8 + seed * 0.5 + plantHeight * 0.1);
   const orbitH = centerY + plantHeight * (0.65 + seed * 0.04);
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!ref.current) return;
     const t = clock.elapsedTime * 0.24 + phase;
-    ref.current.position.set(Math.cos(t) * r, orbitH, Math.sin(t) * r);
+    const pos = scratchPosition(Math.cos(t) * r, orbitH, Math.sin(t) * r);
+    if (!checkVisible(pos)) {
+      setVisible(ref.current, false);
+      return;
+    }
+    setVisible(ref.current, true);
+    ref.current.position.copy(pos);
     applyPlantAvoidance(ref.current.position, flightBounds);
     ref.current.rotation.x += 0.025;
     ref.current.rotation.y += 0.015;
     (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
       0.35 + Math.sin(clock.elapsedTime * 3 + phase) * 0.22;
-  });
+  }, seed);
 
   return (
     <mesh ref={ref}>
@@ -452,20 +510,26 @@ function GiantScarabBeetle({ seed, plantHeight, centerY, flightBounds }: {
   const bodyCol = "#1a5020";
   const shellCol = "#2a7840";
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
-    const flap = Math.sin(clock.elapsedTime * 5 + phase) * 0.5;
-    grp.current.position.set(
+    const pos = scratchPosition(
       Math.cos(t) * r,
       centerY + plantHeight * (0.25 + Math.abs(Math.sin(t * 0.35)) * 0.55),
       Math.sin(t) * r
     );
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
+    const flap = Math.sin(clock.elapsedTime * 5 + phase) * 0.5;
+    grp.current.position.copy(pos);
     applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t + Math.PI / 2;
     if (wingL.current) wingL.current.rotation.z = flap;
     if (wingR.current) wingR.current.rotation.z = -flap;
-  });
+  }, seed);
 
   return (
     <group ref={grp} scale={scale}>
@@ -540,20 +604,26 @@ function GiantLunaMoth({ seed, plantHeight, centerY, flightBounds }: {
     return g;
   }, []);
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
-    const flap = Math.sin(clock.elapsedTime * 3.5 + phase) * 0.45;
-    grp.current.position.set(
+    const pos = scratchPosition(
       Math.cos(t * 0.6) * r,
       centerY + plantHeight * (0.4 + Math.abs(Math.sin(t * 0.3)) * 0.45),
       Math.sin(t * 0.6) * r
     );
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
+    const flap = Math.sin(clock.elapsedTime * 3.5 + phase) * 0.45;
+    grp.current.position.copy(pos);
     applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t * 0.6;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
-  });
+  }, seed);
 
   return (
     <group ref={grp} scale={scale}>
@@ -601,20 +671,29 @@ function GiantHornet({ seed, plantHeight, centerY, flightBounds }: {
   const r = Math.max(4.5, 3.5 + seed * 1.0 + plantHeight * 0.12);
   const scale = 1.4 + (seed % 2) * 0.3;
 
-  useCreatureFrame(({ clock }) => {
+  useCreatureFrame(({ clock, checkVisible, setVisible }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
-    const flap = Math.sin(clock.elapsedTime * 14 + phase) * 0.6;
-    grp.current.position.set(
+    const pos = scratchPosition(
       Math.cos(t) * r + Math.sin(t * 2) * 0.5,
       centerY + plantHeight * (0.3 + Math.abs(Math.sin(t * 0.5)) * 0.5),
       Math.sin(t) * r
     );
+    if (!checkVisible(pos)) {
+      setVisible(grp.current, false);
+      return;
+    }
+    setVisible(grp.current, true);
+    const flap = Math.sin(clock.elapsedTime * 14 + phase) * 0.6;
+    grp.current.position.copy(pos);
     applyPlantAvoidance(grp.current.position, flightBounds);
-    grp.current.rotation.y = Math.atan2(Math.sin(t) * r - grp.current.position.z, Math.cos(t) * r - grp.current.position.x);
+    grp.current.rotation.y = Math.atan2(
+      Math.sin(t) * r - grp.current.position.z,
+      Math.cos(t) * r - grp.current.position.x
+    );
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
-  });
+  }, seed);
 
   return (
     <group ref={grp} scale={scale}>
@@ -672,8 +751,14 @@ export function CreatureSystem({ stage, hydration, activeCreatures, heightScale,
   const { worldHeight: plantHeight, centerY } = bounds;
   const flightBounds = useMemo(() => buildPlantFlightBounds(s, growth), [s, growth]);
   const creatureMul = usePerformanceStore((st) => st.settings().creatureMultiplier);
+  const tier = usePerformanceStore((st) => st.tier);
 
-  const cap = (n: number, max: number) => scaledCount(Math.min(n, max), creatureMul);
+  const cap = (n: number, max: number) => {
+    let count = scaledCount(Math.min(n, max), creatureMul);
+    if (tier === "ultra_low") count = Math.min(count, Math.max(1, Math.ceil(max * 0.35)));
+    else if (tier === "low") count = Math.min(count, Math.max(1, Math.ceil(max * 0.55)));
+    return count;
+  };
 
   const highTier = s >= 50;
   const extBonus = s >= 101 ? Math.floor((s - 100) / 12) : 0;

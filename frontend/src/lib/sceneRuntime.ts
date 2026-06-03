@@ -8,7 +8,7 @@ export function isDemandMode(): boolean {
   return perf.isMobile && perf.demandMode;
 }
 
-/** All animation useFrame / useCreatureFrame callbacks should bail when false. */
+/** Plant / lighting animation hooks — respects mobileStatic freeze. */
 export function shouldRunAnimationFrames(): boolean {
   const rt = useSceneRuntimeStore.getState();
   if (rt.sceneFrozen) return false;
@@ -19,6 +19,20 @@ export function shouldRunAnimationFrames(): boolean {
   if (perf.settings().mobileStatic) return false;
 
   return rt.animationPumpActive;
+}
+
+/** Creature hooks — animate even when the rest of the scene is static. */
+export function shouldRunCreatureFrames(): boolean {
+  const rt = useSceneRuntimeStore.getState();
+  if (rt.sceneFrozen) return false;
+  if (rt.isScrolling) return false;
+  if (rt.uiInteracting) return false;
+
+  const { enableCreatures, creatureFrameSkip } =
+    usePerformanceStore.getState().settings();
+  if (!enableCreatures || creatureFrameSkip >= 999) return false;
+
+  return true;
 }
 
 /** Request a single demand-mode render. */

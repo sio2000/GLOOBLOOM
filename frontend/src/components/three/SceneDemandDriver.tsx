@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
-import { shouldRunAnimationFrames } from "@/lib/sceneRuntime";
+import {
+  shouldRunAnimationFrames,
+  shouldRunCreatureFrames,
+} from "@/lib/sceneRuntime";
 
 /** Mobile demand frameloop: invalidate only when the scene must move. */
 export function SceneDemandDriver() {
@@ -34,10 +37,25 @@ export function SceneDemandDriver() {
       return;
     }
 
-    const mobileStatic = usePerformanceStore.getState().settings().mobileStatic;
-    if (mobileStatic) {
-      invalidate();
-      return;
+    const settings = usePerformanceStore.getState().settings();
+    if (settings.mobileStatic) {
+      if (!settings.enableCreatures) {
+        invalidate();
+        return;
+      }
+      const creatureFps = ultraLow ? 10 : 14;
+      const interval = 1000 / creatureFps;
+      const loop = (now: number) => {
+        if (now - lastTick.current >= interval && shouldRunCreatureFrames()) {
+          lastTick.current = now;
+          invalidate();
+        }
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      rafRef.current = requestAnimationFrame(loop);
+      return () => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      };
     }
 
     const tier = usePerformanceStore.getState().tier;
