@@ -16,16 +16,6 @@ export function trunkRadiusAt(
   return r + surfaceOffset;
 }
 
-/** Vertical caterpillar: anchor on bark so radial half-width stays outside trunk. */
-export function caterpillarTrunkRadius(
-  trunk: ReturnType<typeof getTrunkMetrics>,
-  y: number,
-  scale: number
-): number {
-  const radialHalf = 0.026 * scale;
-  return trunkRadiusAt(trunk, y, radialHalf + 0.006 * scale);
-}
-
 export type TrunkWalkState = {
   y: number;
   direction: 1 | -1;
