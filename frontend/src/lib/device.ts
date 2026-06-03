@@ -26,17 +26,20 @@ export function isTouchDevice(): boolean {
   );
 }
 
+/** Stable viewport for SSR and the first client paint (prevents hydration mismatch). */
+export const SSR_DEFAULT_VIEWPORT: DeviceViewport = {
+  width: 1280,
+  height: 800,
+  aspect: 1280 / 800,
+  isPortrait: false,
+  isMobile: false,
+  isPhone: false,
+  isTouch: false,
+};
+
 export function getDeviceViewport(): DeviceViewport {
   if (typeof window === "undefined") {
-    return {
-      width: 1280,
-      height: 800,
-      aspect: 1280 / 800,
-      isPortrait: false,
-      isMobile: false,
-      isPhone: false,
-      isTouch: false,
-    };
+    return SSR_DEFAULT_VIEWPORT;
   }
 
   const width = window.innerWidth;

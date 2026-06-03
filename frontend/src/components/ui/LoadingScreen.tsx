@@ -2,13 +2,16 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 interface Props {
   isLoading: boolean;
 }
 
 export function LoadingScreen({ isLoading }: Props) {
+  const mounted = useHasMounted();
   const { isMobile } = useDeviceInfo();
+  const showMobileLoader = mounted && isMobile;
 
   return (
     <AnimatePresence>
@@ -19,9 +22,15 @@ export function LoadingScreen({ isLoading }: Props) {
             background: "radial-gradient(ellipse at center, #0a0a1a 0%, #030308 70%)",
           }}
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: isMobile ? 0.35 : 1.5, ease: "easeOut" } }}
+          exit={{
+            opacity: 0,
+            transition: {
+              duration: showMobileLoader ? 0.35 : 1.5,
+              ease: "easeOut",
+            },
+          }}
         >
-          {isMobile ? (
+          {showMobileLoader ? (
             <>
               <div className="relative w-24 h-24 mb-8 rounded-full border border-green-400/25 bg-green-950/30 flex items-center justify-center">
                 <span className="text-3xl">🌿</span>
