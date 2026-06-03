@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useRef, useMemo, useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import {
   OrbitControls,
@@ -71,6 +71,7 @@ function SceneLighting({
   shadowMapSize: number;
   staticMode: boolean;
 }) {
+  const bright = staticMode ? 1.28 : 1;
   const ambientRef = useRef<THREE.AmbientLight>(null);
   const mainLightRef = useRef<THREE.PointLight>(null);
   const rimLightRef = useRef<THREE.PointLight>(null);
@@ -104,15 +105,15 @@ function SceneLighting({
 
   return (
     <>
-      <ambientLight color="#ffffff" intensity={0.9} />
+      <ambientLight color="#ffffff" intensity={0.9 * bright} />
       <ambientLight
         ref={staticMode ? undefined : ambientRef}
         color={seasonAmbient[season]}
-        intensity={0.28 + stage * 0.002}
+        intensity={(0.28 + stage * 0.002) * bright}
       />
       <pointLight
         color="#30a828"
-        intensity={0.65}
+        intensity={0.65 * bright}
         position={[0, 2.5, 3.5]}
         distance={12}
         decay={1.8}
@@ -120,7 +121,7 @@ function SceneLighting({
       <pointLight
         ref={staticMode ? undefined : mainLightRef}
         color={colors.glow}
-        intensity={0.9 + (hydration / 100) * 0.35}
+        intensity={(0.9 + (hydration / 100) * 0.35) * bright}
         position={[2, 1.8, 2]}
         distance={14}
         decay={1.5}
@@ -130,7 +131,7 @@ function SceneLighting({
       <pointLight
         ref={staticMode ? undefined : rimLightRef}
         color={colors.accent}
-        intensity={0.45}
+        intensity={0.45 * bright}
         position={[-2, 1.0, -3]}
         distance={10}
         decay={2}
@@ -138,12 +139,20 @@ function SceneLighting({
       <pointLight
         ref={staticMode ? undefined : fillLightRef}
         color={colors.core}
-        intensity={0.35}
+        intensity={0.35 * bright}
         position={[0, -0.5, 0]}
         distance={6}
         decay={2}
       />
-      <directionalLight color="#ffffff" intensity={0.4} position={[3, 8, 3]} />
+      <directionalLight color="#ffffff" intensity={0.4 * bright} position={[3, 8, 3]} />
+      {staticMode && (
+        <hemisphereLight
+          color="#b8e8c8"
+          groundColor="#1a2818"
+          intensity={0.55}
+          position={[0, 6, 0]}
+        />
+      )}
     </>
   );
 }
@@ -207,9 +216,54 @@ function CameraRig({
       enableRotate
       autoRotate={false}
       makeDefault
-      onChange={() => requestSceneRender()}
+      onChange={() => {
+        requestSceneRender();
+      }}
     />
   );
+}
+
+/** Keeps fog end beyond camera distance so zoom-out does not wash the scene to black. */
+function ZoomAwareFog({
+  stage,
+  baseNear,
+  baseFar,
+  targetY,
+}: {
+  stage: number;
+  baseNear: number;
+  baseFar: number;
+  targetY: number;
+}) {
+  const { camera, scene } = useThree();
+  const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
+  const target = useMemo(() => new THREE.Vector3(), []);
+  const fogColor = useMemo(() => new THREE.Color(getStageColor(stage).fog), [stage]);
+
+  const apply = () => {
+    target.set(0, targetY + viewOffsetY, 0);
+    const dist = camera.position.distanceTo(target);
+    const far = Math.max(baseFar, dist * 7, baseFar * 1.8);
+    const near = Math.min(baseNear, Math.max(12, dist * 0.22));
+    if (!scene.fog || !(scene.fog instanceof THREE.Fog)) {
+      scene.fog = new THREE.Fog(fogColor.getHex(), near, far);
+    } else {
+      scene.fog.near = near;
+      scene.fog.far = far;
+      scene.fog.color.copy(fogColor);
+    }
+  };
+
+  useEffect(() => {
+    apply();
+    requestSceneRender();
+  }, [stage, baseNear, baseFar, targetY, viewOffsetY]);
+
+  useFrame(() => {
+    apply();
+  });
+
+  return null;
 }
 
 function CameraSetup({
@@ -315,13 +369,11 @@ function SceneContent() {
         multisampling={perf.bloomMultisampling}
       />
 
-      <fog
-        attach="fog"
-        args={[
-          getStageColor(stage).fog,
-          cameraLimits.fogNear,
-          fogFar,
-        ]}
+      <ZoomAwareFog
+        stage={stage}
+        baseNear={cameraLimits.fogNear}
+        baseFar={fogFar}
+        targetY={cameraLimits.targetY}
       />
     </>
   );
@@ -338,7 +390,12 @@ export function GloobloomScene() {
   const tier = usePerformanceStore((s) => s.tier);
   const device = useDeviceInfo();
   const sceneFrozen = useSceneRuntimeStore((s) => s.sceneFrozen);
-  const fogColor = getStageColor(stage ?? 1).fog;
+  const sceneBg = useMemo(() => {
+    const c = getStageColor(stage ?? 1);
+    const col = new THREE.Color(c.fog);
+    col.lerp(new THREE.Color(c.glow), device.isMobile ? 0.2 : 0.1);
+    return col;
+  }, [stage, device.isMobile]);
   const cameraLimits = getCameraLimits(stage, growth, {
     isMobile: device.isMobile,
     isPortrait: device.isPortrait,
@@ -376,11 +433,11 @@ export function GloobloomScene() {
               ? "low-power"
               : "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.8,
+          toneMappingExposure: device.isMobile ? 1.08 : 0.88,
           stencil: false,
           depth: true,
         }}
-        scene={{ background: new THREE.Color(fogColor) }}
+        scene={{ background: sceneBg }}
       >
         <AdaptiveDpr pixelated />
         <Suspense fallback={null}>

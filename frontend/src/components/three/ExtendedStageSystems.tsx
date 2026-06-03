@@ -8,7 +8,6 @@ import { extendedScaleMultiplier, isExtendedStage } from "@/lib/stageConstants";
 import {
   CATERPILLAR_LANES,
   TRUNK_Y_FULL,
-  TRUNK_Y_ROOT,
   trunkLaneAngle,
   trunkYRange,
 } from "@/lib/trunkLanes";
@@ -92,54 +91,7 @@ function RootWaterLily({
   );
 }
 
-function RootSpider({
-  angle,
-  dist,
-  baseY,
-  scale,
-  seed,
-}: {
-  angle: number;
-  dist: number;
-  baseY: number;
-  scale: number;
-  seed: number;
-}) {
-  const ref = useRef<THREE.Group>(null);
-  useCreatureFrame(({ clock }) => {
-    if (!ref.current) return;
-    const t = clock.elapsedTime * 0.4 + seed;
-    ref.current.position.set(
-      Math.cos(angle) * dist + Math.sin(t * 2) * 0.04 * scale,
-      baseY + 0.05 * scale + Math.sin(t) * 0.02 * scale,
-      Math.sin(angle) * dist + Math.cos(t * 2) * 0.04 * scale
-    );
-  }, seed);
-
-  return (
-    <group ref={ref} scale={scale}>
-      <mesh>
-        <sphereGeometry args={[0.035, 10, 10]} />
-        <meshStandardMaterial color="#1a1010" emissive="#402020" emissiveIntensity={0.15} roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.02, 0.04]} scale={[1.2, 0.7, 1]}>
-        <sphereGeometry args={[0.028, 8, 8]} />
-        <meshStandardMaterial color="#2a1818" roughness={0.75} />
-      </mesh>
-      {Array.from({ length: 8 }, (_, i) => {
-        const a = (i / 8) * Math.PI * 2;
-        return (
-          <mesh key={i} position={[Math.cos(a) * 0.04, -0.01, Math.sin(a) * 0.04]} rotation={[0.5, a, 0.3]}>
-            <capsuleGeometry args={[0.004, 0.08, 3, 5]} />
-            <meshStandardMaterial color="#1a1010" />
-          </mesh>
-        );
-      })}
-    </group>
-  );
-}
-
-const MAX_CATERPILLARS = 3;
+const MAX_CATERPILLARS = 2;
 
 function SatellitePlant({
   angle,
@@ -271,17 +223,6 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
     }));
   }, [stage, trunkR, extMul, sizeBoost, lite]);
 
-  const spiders = useMemo(() => {
-    const count = capN(Math.min(3 + Math.floor((stage - 105) / 18), 12), 3);
-    return Array.from({ length: count }, (_, i) => ({
-      id: i,
-      angle: seeded(i + 50, 0) * Math.PI * 2,
-      dist: trunkR + (0.6 + seeded(i + 50, 1) * 0.8),
-      scale: (2.5 + seeded(i + 50, 2) * 1.5) * sizeBoost * 0.22,
-      seed: i * 1.7,
-    }));
-  }, [stage, trunkR, sizeBoost, lite]);
-
   const satellites = useMemo(() => {
     const count = capN(Math.min(5 + Math.floor((stage - 101) / 12), 24), 6);
     return Array.from({ length: count }, (_, i) => ({
@@ -298,20 +239,8 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
     const baseScale = sizeBoost * 0.65 * 0.25;
     const crawlSpeed = 0.26;
     const full = trunkYRange(trunkBaseY, trunkHeight, TRUNK_Y_FULL);
-    const root = trunkYRange(trunkBaseY, trunkHeight, TRUNK_Y_ROOT);
     const lanes = CATERPILLAR_LANES;
     return [
-      {
-        id: 0,
-        yMin: root.yMin,
-        yMax: root.yMax,
-        angle: trunkLaneAngle(lanes[0]!),
-        pattern: 0 as const,
-        scale: baseScale * 3.1,
-        seed: 1.2,
-        speed: crawlSpeed,
-        midPause: false,
-      },
       {
         id: 1,
         yMin: full.yMin,
@@ -334,13 +263,13 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
         speed: crawlSpeed,
         midPause: true,
       },
-    ].slice(0, lite ? 2 : MAX_CATERPILLARS);
+    ].slice(0, lite ? 1 : MAX_CATERPILLARS);
   }, [trunk, sizeBoost, lite]);
 
   const trunkBottomY = trunk.trunkBaseY;
   const trunkTopY = trunk.trunkTopY;
 
-  const { trunk: trunkClimbers, butterflies: trunkButterflies, root: rootClimbers } = useMemo(
+  const { trunk: trunkClimbers, butterflies: trunkButterflies } = useMemo(
     () => buildTrunkClimbers(stage, trunkR, trunkBottomY, trunkTopY, sizeBoost),
     [stage, trunkR, trunkBottomY, trunkTopY, sizeBoost]
   );
@@ -354,9 +283,6 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
     <group>
       {lilies.map((l) => (
         <RootWaterLily key={l.id} {...l} baseY={baseY} hydration={hydration} />
-      ))}
-      {spiders.map((s) => (
-        <RootSpider key={s.id} {...s} baseY={baseY + 0.04 * s.scale} />
       ))}
       {satellites.map((p) => (
         <SatellitePlant key={p.id} {...p} baseY={baseY} colors={colors} />
@@ -400,32 +326,20 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
           color={c.color}
         />
       ))}
-      {trunkClimbers.map((c) => (
-        <TrunkClimber
-          key={c.id}
-          yMin={c.yMin}
-          yMax={c.yMax}
-          angle={c.angle}
-          trunkR={trunkR}
-          trunk={trunk}
-          speed={c.speed}
-          scale={c.scale}
-          seed={c.seed}
-        />
-      ))}
-      {rootClimbers.map((c) => (
-        <TrunkClimber
-          key={c.id}
-          yMin={c.yMin}
-          yMax={c.yMax}
-          angle={c.angle}
-          trunkR={trunkR}
-          trunk={trunk}
-          speed={c.speed}
-          scale={c.scale}
-          seed={c.seed}
-        />
-      ))}
+      {!lite &&
+        trunkClimbers.map((c) => (
+          <TrunkClimber
+            key={c.id}
+            yMin={c.yMin}
+            yMax={c.yMax}
+            angle={c.angle}
+            trunkR={trunkR}
+            trunk={trunk}
+            speed={c.speed}
+            scale={c.scale}
+            seed={c.seed}
+          />
+        ))}
     </group>
   );
 }

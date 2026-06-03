@@ -215,8 +215,8 @@ export function getCameraLimits(
   return {
     minDistance: mobile ? 0.15 : 0.08,
     maxDistance,
-    fogNear: mobile ? 14 : 18,
-    fogFar: Math.max(120, worldHeight * 5 + 80),
+    fogNear: mobile ? 28 : 22,
+    fogFar: Math.max(mobile ? 420 : 280, worldHeight * 8 + 160),
     targetY: centerY,
     cameraY,
     cameraZ,
