@@ -92,6 +92,7 @@ export function LazyWorldContent({
             growth={growth}
             decay={decay}
             hydration={hydration}
+            totalWaterings={totalWaterings}
             minimalFlame
           />
         )}

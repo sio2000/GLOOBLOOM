@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { getStageColor } from "@/types/organism";
 import { getTrunkMetrics } from "@/lib/plantScale";
+import { getCappedRootMushroomScale } from "@/lib/rootGrowth";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
 import { requestSceneRender } from "@/lib/sceneRuntime";
@@ -241,12 +242,14 @@ export function StaticRootAmbience({
   growth,
   decay,
   hydration = 100,
+  totalWaterings = 0,
   minimalFlame = false,
 }: {
   stage: number;
   growth: number;
   decay: number;
   hydration?: number;
+  totalWaterings?: number;
   /** Mobile: single root torch only (no ring lights). */
   minimalFlame?: boolean;
 }) {
@@ -270,7 +273,7 @@ export function StaticRootAmbience({
         pos: [Math.cos(1.1) * r, rootY, Math.sin(1.1) * r] as [number, number, number],
         angle: 1.1,
         variant: 0,
-        scale: Math.max(1.15, trunk.trunkRadiusBottom * 18),
+        heightMul: 1.0,
       },
       {
         id: 1,
@@ -281,10 +284,13 @@ export function StaticRootAmbience({
         ],
         angle: 4.2,
         variant: 2,
-        scale: Math.max(1.0, trunk.trunkRadiusBottom * 15),
+        heightMul: 0.68,
       },
-    ];
-  }, [minimalFlame, rootY, trunk.trunkRadiusBottom]);
+    ].map((m) => ({
+      ...m,
+      scale: getCappedRootMushroomScale(totalWaterings, stage, growth, m.heightMul),
+    }));
+  }, [minimalFlame, rootY, trunk.trunkRadiusBottom, totalWaterings, stage, growth]);
 
   const ringFlames = useMemo(() => {
     if (minimalFlame) return [];

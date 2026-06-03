@@ -247,7 +247,7 @@ export function MobileFlyingInsects({ stage, growth, tier }: Props) {
       {giants.map((g) =>
         renderGiant(g, {
           ...flyProps,
-          scale: mobileInsectScale(stage, growth, g.kind === "beetle" ? 1.12 : 1.06),
+          scale: mobileInsectScale(stage, growth, g.kind === "beetle" ? 1.18 : 1.12),
         })
       )}
     </group>

@@ -47,8 +47,8 @@ export function SceneDemandDriver() {
         const beesOnly = insectsOn && !creaturesOn;
         const ms = beesOnly
           ? usePerformanceStore.getState().tier === "ultra_low"
-            ? 1600
-            : 1300
+            ? 1500
+            : 1250
           : usePerformanceStore.getState().tier === "ultra_low"
             ? 6000
             : 4500;

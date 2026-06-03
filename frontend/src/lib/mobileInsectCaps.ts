@@ -1,16 +1,16 @@
 import type { QualityTier } from "@/lib/performance";
 import type { FlyPath } from "@/lib/insectFlight";
 
-/** Hard caps — do not raise without mobile perf testing. */
+/** Hard caps — tuned for smooth demand-mode pan/zoom. */
 export const MOBILE_FLIGHT_CAP: Record<"ultra_low" | "low", number> = {
-  ultra_low: 4,
-  low: 5,
+  ultra_low: 5,
+  low: 6,
 };
 
 /** Max giant species (besides bees) per tier. */
 export const MOBILE_GIANT_CAP: Record<"ultra_low" | "low", number> = {
-  ultra_low: 2,
-  low: 3,
+  ultra_low: 3,
+  low: 4,
 };
 
 /** Always prefer two bees on mobile when stage allows — giants fill remaining slots. */

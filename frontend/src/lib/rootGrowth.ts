@@ -86,6 +86,16 @@ export function getRootDecorWorldHeight(
   return getRootDecorHeightMeters(totalWaterings, stage) / METERS_PER_WORLD_UNIT;
 }
 
+/** Per-mushroom mesh scale — capped to plant fraction (never trunk-radius driven). */
+export function getCappedRootMushroomScale(
+  totalWaterings: number,
+  stage: number,
+  growth: number,
+  heightMul: number
+): number {
+  return Math.max(0.04, getRootDecorWorldHeight(totalWaterings, stage, growth) * heightMul);
+}
+
 export interface RootPlacementDef {
   id: number;
   unlockStage: number;
