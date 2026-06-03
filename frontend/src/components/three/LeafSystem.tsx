@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -27,7 +27,15 @@ function makeLeafGeo(w = 0.09, h = 0.24): THREE.ShapeGeometry {
 const LEAF_GEO = makeLeafGeo();
 const VEIN_GEO = new THREE.CapsuleGeometry(0.004, 0.18, 3, 6);
 
-function NameLeaf({ leaf, showLabel = true }: { leaf: LeafData; showLabel?: boolean }) {
+function NameLeaf({
+  leaf,
+  showLabel = true,
+  staticLeaf = false,
+}: {
+  leaf: LeafData;
+  showLabel?: boolean;
+  staticLeaf?: boolean;
+}) {
   const grpRef = useRef<THREE.Group>(null);
   const phase = useMemo(() => (leaf.posX * 3.1 + leaf.posZ * 5.7) % (Math.PI * 2), [leaf.posX, leaf.posZ]);
 
@@ -56,14 +64,14 @@ function NameLeaf({ leaf, showLabel = true }: { leaf: LeafData; showLabel?: bool
   );
 
   useAdaptiveFrame(({ clock }) => {
-    if (!grpRef.current) return;
+    if (staticLeaf || !grpRef.current) return;
     const t = clock.elapsedTime;
     grpRef.current.position.y = leaf.posY + Math.sin(t * 0.5 + phase) * 0.012;
   });
 
   return (
     <group
-      ref={grpRef}
+      ref={staticLeaf ? undefined : grpRef}
       position={[leaf.posX, leaf.posY, leaf.posZ]}
       quaternion={leafQuaternion}
     >
@@ -114,13 +122,25 @@ function NameLeaf({ leaf, showLabel = true }: { leaf: LeafData; showLabel?: bool
 
 export function LeafSystem({ leaves, stage = 1, growth = 0 }: Props) {
   const labelCap = usePerformanceStore((s) => s.settings().labelsMax);
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
+  const setNamedLeafCount = usePerformanceStore((s) => s.setNamedLeafCount);
   const trunkLeaves = filterTrunkLeaves(leaves, stage, growth);
+
+  useEffect(() => {
+    setNamedLeafCount(leaves.length);
+  }, [leaves.length, setNamedLeafCount]);
+
   if (!trunkLeaves.length) return null;
 
   return (
     <group>
-      {trunkLeaves.slice(0, 100).map((leaf, index) => (
-        <NameLeaf key={leaf.id} leaf={leaf} showLabel={index < labelCap} />
+      {trunkLeaves.map((leaf, index) => (
+        <NameLeaf
+          key={leaf.id}
+          leaf={leaf}
+          showLabel={index < labelCap}
+          staticLeaf={mobileStatic}
+        />
       ))}
     </group>
   );

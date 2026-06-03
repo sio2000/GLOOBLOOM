@@ -23,6 +23,13 @@ import {
   type DegradeAction,
 } from "@/lib/adaptiveMetrics";
 import { getDeviceViewport } from "@/lib/device";
+import {
+  INSECT_RELIEF_MIN,
+  INSECT_RELIEF_STEP_DOWN,
+  INSECT_RELIEF_STEP_UP,
+  canRestoreInsects,
+  shouldReduceInsectsForLeaves,
+} from "@/lib/leafPressure";
 
 export interface PerformanceMetrics {
   fps: FpsSnapshot;
@@ -43,10 +50,14 @@ interface PerformanceState {
   dynamicScale: number;
   worldPhase: number;
   lastTierChangeAt: number;
+  namedLeafCount: number;
+  /** 1 = full insects; lowered only when many leaves + FPS struggle (never culls leaves). */
+  insectReliefScale: number;
   metrics: FpsSnapshot;
   init: () => void;
   tickFrame: (deltaSec: number, renderMs?: number) => void;
   setWorldPhase: (phase: number) => void;
+  setNamedLeafCount: (count: number) => void;
   forceTier: (tier: QualityTier) => void;
   settings: () => QualitySettings;
   getMetrics: () => PerformanceMetrics;
@@ -65,9 +76,19 @@ const EMPTY_SNAP: FpsSnapshot = {
 function buildSettings(
   tier: QualityTier,
   dynamicScale: number,
-  isMobile: boolean
+  isMobile: boolean,
+  insectReliefScale: number
 ): QualitySettings {
   let s = applyDynamicScale(getQualitySettings(tier), dynamicScale);
+  const relief = Math.max(INSECT_RELIEF_MIN, Math.min(1, insectReliefScale));
+  if (relief < 0.999) {
+    s = {
+      ...s,
+      creatureMultiplier: s.creatureMultiplier * relief,
+      insectMultiplier: s.insectMultiplier * relief,
+      enableGiantInsects: relief >= 0.45 ? s.enableGiantInsects : false,
+    };
+  }
   if (isMobile && tierIndex(s.tier) <= tierIndex("low")) {
     s = {
       ...s,
@@ -130,6 +151,8 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
   dynamicScale: 1,
   worldPhase: 0,
   lastTierChangeAt: 0,
+  namedLeafCount: 0,
+  insectReliefScale: 1,
   metrics: EMPTY_SNAP,
 
   init: () => {
@@ -149,10 +172,18 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
       ultraLow: tier === "ultra_low",
       dynamicScale: 1,
       worldPhase: 0,
+      namedLeafCount: 0,
+      insectReliefScale: 1,
       initialized: true,
       lastTierChangeAt: performance.now(),
       metrics: EMPTY_SNAP,
     });
+  },
+
+  setNamedLeafCount: (count) => {
+    const n = Math.max(0, Math.floor(count));
+    if (get().namedLeafCount === n) return;
+    set({ namedLeafCount: n });
   },
 
   tickFrame: (deltaSec, renderMs) => {
@@ -161,6 +192,18 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
     const state = get();
     const action = evaluateDegrade(snap);
     let patch: Partial<PerformanceState> = { metrics: snap };
+
+    let relief = state.insectReliefScale;
+    if (shouldReduceInsectsForLeaves(snap, state.namedLeafCount, state.isMobile)) {
+      relief = Math.max(INSECT_RELIEF_MIN, relief - INSECT_RELIEF_STEP_DOWN);
+    } else if (canRestoreInsects(snap, relief)) {
+      relief = Math.min(1, relief + INSECT_RELIEF_STEP_UP);
+    } else if (!state.namedLeafCount || relief < 1) {
+      relief = Math.min(1, relief + INSECT_RELIEF_STEP_UP * 0.5);
+    }
+    if (relief !== state.insectReliefScale) {
+      patch.insectReliefScale = relief;
+    }
 
     if (action !== "none") {
       patch = { ...patch, ...applyDegradeAction(action, state) };
@@ -182,7 +225,13 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
     }
 
     const next = { ...state, ...patch };
-    const settings = buildSettings(next.tier, next.dynamicScale, next.isMobile);
+    const insectRelief = patch.insectReliefScale ?? next.insectReliefScale;
+    const settings = buildSettings(
+      next.tier,
+      next.dynamicScale,
+      next.isMobile,
+      insectRelief
+    );
     patch.demandMode = settings.demandMode;
     patch.ultraLow = next.tier === "ultra_low";
 
@@ -203,8 +252,8 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
   },
 
   settings: () => {
-    const { tier, dynamicScale, isMobile } = get();
-    return buildSettings(tier, dynamicScale, isMobile);
+    const { tier, dynamicScale, isMobile, insectReliefScale } = get();
+    return buildSettings(tier, dynamicScale, isMobile, insectReliefScale);
   },
 
   getMetrics: () => {

@@ -73,6 +73,7 @@ function GloobloomApp() {
   const showNotif = useOrganismStore((s) => s.showNotif);
   const { updateMood } = useAudioSystem();
   const state = useOrganismStore((s) => s.state);
+  const leaves = useOrganismStore((s) => s.leaves);
   const [sceneReady, setSceneReady] = useState(false);
 
   useSocket();
@@ -129,7 +130,11 @@ function GloobloomApp() {
     if (state) {
       updateMood(state.mood, state.season);
     }
-  }, [state?.mood, state?.season]);
+  }, [state?.mood, state?.season, updateMood]);
+
+  useEffect(() => {
+    usePerformanceStore.getState().setNamedLeafCount(leaves.length);
+  }, [leaves.length]);
 
   useEffect(() => {
     if (!isAdmin) return;
