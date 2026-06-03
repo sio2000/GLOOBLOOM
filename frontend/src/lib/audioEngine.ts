@@ -8,6 +8,8 @@ interface AudioNodes {
   padOsc2: OscillatorNode;
   padOsc3: OscillatorNode;
   padGain: GainNode;
+  noiseSource: AudioBufferSourceNode | null;
+  noiseGain: GainNode;
   filterLow: BiquadFilterNode;
   filterHigh: BiquadFilterNode;
   reverbConvolver: ConvolverNode;
@@ -15,8 +17,8 @@ interface AudioNodes {
   dryGain: GainNode;
 }
 
-const MASTER_VOLUME_DESKTOP = 0.08;
-const MASTER_VOLUME_MOBILE = 0.22;
+const MASTER_VOLUME_DESKTOP = 0.1;
+const MASTER_VOLUME_MOBILE = 0.24;
 
 function isMobileAudio(): boolean {
   if (typeof window === "undefined") return false;
@@ -29,7 +31,7 @@ function masterVolume(): number {
 
 type Listener = () => void;
 
-function createReverb(ctx: AudioContext, duration = 6, decay = 4): AudioBuffer {
+function createReverb(ctx: AudioContext, duration = 4.5, decay = 3.2): AudioBuffer {
   const len = ctx.sampleRate * duration;
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
@@ -41,21 +43,35 @@ function createReverb(ctx: AudioContext, duration = 6, decay = 4): AudioBuffer {
   return buf;
 }
 
+/** Warm garden pentatonic — organic, not clinical “healing tone” pads. */
 function getMoodFreqs(mood: OrganismMood): [number, number, number] {
   const map: Record<OrganismMood, [number, number, number]> = {
-    transcendent: [528, 639, 741],
-    thriving:     [432, 528, 648],
-    content:      [396, 528, 594],
-    thirsty:      [341, 440, 528],
-    dormant:      [288, 396, 432],
-    decaying:     [256, 341, 432],
-    critical:     [228, 304, 396],
+    transcendent: [392, 494, 587],
+    thriving:     [330, 392, 494],
+    content:      [294, 370, 440],
+    thirsty:      [262, 330, 392],
+    dormant:      [220, 277, 330],
+    decaying:     [196, 247, 294],
+    critical:     [175, 220, 262],
   };
-  return map[mood] ?? [432, 528, 648];
+  return map[mood] ?? [294, 370, 440];
 }
 
 function getSeasonDetune(season: Season): number {
-  return { bloom: 0, mist: -8, golden_decay: -16, neon_rain: 10 }[season] ?? 0;
+  return { bloom: 0, mist: -6, golden_decay: -12, neon_rain: 8 }[season] ?? 0;
+}
+
+function createBrownNoiseBuffer(ctx: AudioContext, seconds = 3): AudioBuffer {
+  const len = ctx.sampleRate * seconds;
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    const white = Math.random() * 2 - 1;
+    last = (last + white * 0.04) / 1.04;
+    data[i] = last * 2.8;
+  }
+  return buf;
 }
 
 class AudioEngine {
@@ -66,7 +82,9 @@ class AudioEngine {
 
   subscribe(fn: Listener) {
     this.listeners.add(fn);
-    return () => { this.listeners.delete(fn); };
+    return () => {
+      this.listeners.delete(fn);
+    };
   }
 
   private notify() {
@@ -93,7 +111,7 @@ class AudioEngine {
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0, ctx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(masterVolume(), ctx.currentTime + 4);
+    masterGain.gain.linearRampToValueAtTime(masterVolume(), ctx.currentTime + 3.5);
     masterGain.connect(ctx.destination);
 
     const breathGain = ctx.createGain();
@@ -102,32 +120,36 @@ class AudioEngine {
 
     const filterHigh = ctx.createBiquadFilter();
     filterHigh.type = "highpass";
-    filterHigh.frequency.value = 180;
-    filterHigh.Q.value = 0.5;
+    filterHigh.frequency.value = 120;
+    filterHigh.Q.value = 0.4;
     filterHigh.connect(breathGain);
 
     const filterLow = ctx.createBiquadFilter();
     filterLow.type = "lowpass";
-    filterLow.frequency.value = 1400;
-    filterLow.Q.value = 0.7;
+    filterLow.frequency.value = 1100;
+    filterLow.Q.value = 0.5;
     filterLow.connect(filterHigh);
 
     const reverbConvolver = ctx.createConvolver();
-    reverbConvolver.buffer = createReverb(ctx, 6, 4);
+    reverbConvolver.buffer = createReverb(ctx, 4.5, 3.2);
     const reverbGain = ctx.createGain();
-    reverbGain.gain.value = 0.6;
+    reverbGain.gain.value = 0.45;
     reverbConvolver.connect(reverbGain);
     reverbGain.connect(breathGain);
 
     const dryGain = ctx.createGain();
-    dryGain.gain.value = 0.4;
+    dryGain.gain.value = 0.5;
     dryGain.connect(filterLow);
 
     const [f1, f2, f3] = getMoodFreqs("content");
 
-    function makePad(freq: number, gain: number): OscillatorNode {
+    function makePad(
+      freq: number,
+      gain: number,
+      type: OscillatorType = "triangle"
+    ): OscillatorNode {
       const osc = ctx.createOscillator();
-      osc.type = "sine";
+      osc.type = type;
       osc.frequency.value = freq;
       const g = ctx.createGain();
       g.gain.value = gain;
@@ -138,24 +160,39 @@ class AudioEngine {
       return osc;
     }
 
-    const padOsc1 = makePad(f1, 0.35);
-    const padOsc2 = makePad(f2, 0.22);
-    const padOsc3 = makePad(f3, 0.14);
+    const padOsc1 = makePad(f1, 0.28, "triangle");
+    const padOsc2 = makePad(f2, 0.2, "triangle");
+    const padOsc3 = makePad(f3, 0.12, "sine");
+
+    const noiseBuf = createBrownNoiseBuffer(ctx);
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuf;
+    noiseSource.loop = true;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.035;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "lowpass";
+    noiseFilter.frequency.value = 420;
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(dryGain);
+    noiseGain.connect(reverbConvolver);
+    noiseSource.start();
 
     const lfo = ctx.createOscillator();
     lfo.type = "sine";
-    lfo.frequency.value = 0.05;
+    lfo.frequency.value = 0.035;
     const lfoScale = ctx.createGain();
-    lfoScale.gain.value = 0.08;
+    lfoScale.gain.value = 0.06;
     lfo.connect(lfoScale);
     lfoScale.connect(breathGain.gain);
     lfo.start();
 
     const filterLfo = ctx.createOscillator();
     filterLfo.type = "sine";
-    filterLfo.frequency.value = 0.03;
+    filterLfo.frequency.value = 0.018;
     const filterScale = ctx.createGain();
-    filterScale.gain.value = 150;
+    filterScale.gain.value = 120;
     filterLfo.connect(filterScale);
     filterScale.connect(filterLow.frequency);
     filterLfo.start();
@@ -168,6 +205,8 @@ class AudioEngine {
       padOsc2,
       padOsc3,
       padGain: dryGain,
+      noiseSource,
+      noiseGain,
       filterLow,
       filterHigh,
       reverbConvolver,
@@ -212,45 +251,58 @@ class AudioEngine {
     const detune = getSeasonDetune(season);
     const t = n.ctx.currentTime;
 
-    n.padOsc1.frequency.linearRampToValueAtTime(f1, t + 6);
-    n.padOsc2.frequency.linearRampToValueAtTime(f2, t + 6);
-    n.padOsc3.frequency.linearRampToValueAtTime(f3, t + 6);
+    n.padOsc1.frequency.linearRampToValueAtTime(f1, t + 8);
+    n.padOsc2.frequency.linearRampToValueAtTime(f2, t + 8);
+    n.padOsc3.frequency.linearRampToValueAtTime(f3, t + 8);
 
-    n.padOsc1.detune.linearRampToValueAtTime(detune, t + 5);
-    n.padOsc2.detune.linearRampToValueAtTime(detune + 2, t + 5);
-    n.padOsc3.detune.linearRampToValueAtTime(detune - 1, t + 5);
+    n.padOsc1.detune.linearRampToValueAtTime(detune, t + 6);
+    n.padOsc2.detune.linearRampToValueAtTime(detune + 3, t + 6);
+    n.padOsc3.detune.linearRampToValueAtTime(detune - 2, t + 6);
 
-    const cutoff = mood === "transcendent" ? 2000
-      : mood === "thriving" ? 1400
-      : mood === "decaying" ? 600
-      : mood === "critical" ? 400
-      : 900;
-    n.filterLow.frequency.linearRampToValueAtTime(cutoff, t + 5);
+    const cutoff =
+      mood === "transcendent"
+        ? 1600
+        : mood === "thriving"
+          ? 1200
+          : mood === "decaying"
+            ? 700
+            : mood === "critical"
+              ? 520
+              : 1000;
+    n.filterLow.frequency.linearRampToValueAtTime(cutoff, t + 6);
 
-    const rev = mood === "transcendent" ? 0.9 : mood === "decaying" ? 0.75 : 0.55;
-    n.reverbGain.gain.linearRampToValueAtTime(rev, t + 5);
+    const rev =
+      mood === "transcendent" ? 0.55 : mood === "decaying" ? 0.5 : 0.42;
+    n.reverbGain.gain.linearRampToValueAtTime(rev, t + 6);
+
+    const wind =
+      mood === "critical" || mood === "decaying" ? 0.05 : 0.032;
+    n.noiseGain.gain.linearRampToValueAtTime(wind, t + 6);
   }
 
   playWaterChime() {
     const n = this.nodes;
     if (!n || this.muted) return;
 
-    const notes = [880, 1108, 1320, 1760];
+    const notes = [523.25, 659.25, 783.99, 1046.5];
     const t = n.ctx.currentTime;
 
     notes.forEach((freq, i) => {
       const osc = n.ctx.createOscillator();
       const env = n.ctx.createGain();
-      osc.type = "sine";
+      osc.type = "triangle";
       osc.frequency.value = freq;
-      env.gain.setValueAtTime(0, t + i * 0.06);
-      env.gain.linearRampToValueAtTime(isMobileAudio() ? 0.18 : 0.09, t + i * 0.06 + 0.008);
-      env.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 1.0);
+      env.gain.setValueAtTime(0, t + i * 0.07);
+      env.gain.linearRampToValueAtTime(
+        isMobileAudio() ? 0.14 : 0.08,
+        t + i * 0.07 + 0.01
+      );
+      env.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 1.2);
       osc.connect(env);
       env.connect(n.reverbConvolver);
       env.connect(n.masterGain);
-      osc.start(t + i * 0.06);
-      osc.stop(t + i * 0.06 + 1.1);
+      osc.start(t + i * 0.07);
+      osc.stop(t + i * 0.07 + 1.3);
     });
   }
 
@@ -259,6 +311,7 @@ class AudioEngine {
   }
 
   destroy() {
+    this.nodes?.noiseSource?.stop();
     this.nodes?.ctx.close();
     this.nodes = null;
     this.started = false;

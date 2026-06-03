@@ -7,6 +7,7 @@ import { getTrunkMetrics } from "@/lib/plantScale";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
 import { requestSceneRender } from "@/lib/sceneRuntime";
+import { RootStaticCritters } from "./RootStaticCritters";
 
 const ROOT_FLAME_COLORS = [
   "#ff9020",
@@ -214,6 +215,11 @@ export function StaticRootAmbience({
       {ringFlames.map((f) => (
         <StaticRootFlame key={f.id} position={f.pos} color={f.color} scale={f.scale} />
       ))}
+      <RootStaticCritters
+        rootY={rootY}
+        trunkRadius={trunk.trunkRadiusBottom}
+        stage={stage}
+      />
     </group>
   );
 }
