@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useRef, useMemo, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import {
   OrbitControls,
@@ -29,7 +29,12 @@ import { MobileTouchPan } from "./MobileTouchPan";
 import { SceneDemandDriver } from "./SceneDemandDriver";
 import { AdaptivePerformanceMonitor } from "./AdaptivePerformanceMonitor";
 import { LazyWorldContent } from "./LazyWorldContent";
-import { requestSceneRender } from "@/lib/sceneRuntime";
+import {
+  beginCameraInteraction,
+  endCameraInteraction,
+  requestSceneRender,
+} from "@/lib/sceneRuntime";
+import { applyZoomAwareFog } from "@/lib/sceneFog";
 import { getSceneSkyColor, SCENE_SKY_HEX } from "@/lib/sceneBackground";
 
 function PostProcessing({
@@ -162,34 +167,32 @@ function CameraRig({
   limits,
   isMobile,
   staticCamera,
+  fogNear,
+  fogFar,
 }: {
   limits: ReturnType<typeof getCameraLimits>;
   isMobile: boolean;
   staticCamera: boolean;
+  fogNear: number;
+  fogFar: number;
 }) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
-  const targetVec = useMemo(() => new THREE.Vector3(), []);
+  const { camera, scene } = useThree();
 
-  useAdaptiveFrame((_, delta) => {
-    if (staticCamera) return;
-    const controls = controlsRef.current;
-    if (!controls) return;
-    const targetY = limits.targetY + viewOffsetY;
-    targetVec.set(0, targetY, 0);
-    controls.target.lerp(targetVec, Math.min(1, delta * 6));
-    controls.update();
-  });
-
-  useEffect(() => {
-    if (!staticCamera) return;
+  const syncTargetAndFog = () => {
     const controls = controlsRef.current;
     if (!controls) return;
     const targetY = limits.targetY + viewOffsetY;
     controls.target.set(0, targetY, 0);
     controls.update();
-    requestSceneRender();
-  }, [staticCamera, limits.targetY, viewOffsetY]);
+    applyZoomAwareFog(scene, camera, targetY, fogNear, fogFar);
+  };
+
+  useEffect(() => {
+    syncTargetAndFog();
+    requestSceneRender(true);
+  }, [limits.targetY, viewOffsetY, fogNear, fogFar]);
 
   useEffect(() => {
     const controls = controlsRef.current;
@@ -197,7 +200,7 @@ function CameraRig({
     controls.minDistance = limits.minDistance;
     controls.maxDistance = limits.maxDistance;
     controls.update();
-    requestSceneRender();
+    requestSceneRender(true);
   }, [limits.minDistance, limits.maxDistance]);
 
   return (
@@ -205,27 +208,41 @@ function CameraRig({
       ref={controlsRef}
       enablePan={!isMobile}
       enableZoom
-      enableDamping={!staticCamera}
-      dampingFactor={0.06}
+      enableDamping={false}
       minDistance={limits.minDistance}
       maxDistance={limits.maxDistance}
       maxPolarAngle={Math.PI * 0.92}
       minPolarAngle={Math.PI * 0.02}
-      rotateSpeed={isMobile ? 0.65 : 0.45}
-      zoomSpeed={isMobile ? 1.1 : 1.5}
-      panSpeed={isMobile ? 0.4 : 0.65}
+      rotateSpeed={isMobile ? 0.5 : 0.45}
+      zoomSpeed={isMobile ? 0.55 : 1.5}
+      panSpeed={isMobile ? 0.35 : 0.65}
       enableRotate
       autoRotate={false}
       makeDefault
+      onStart={() => {
+        beginCameraInteraction();
+      }}
+      onEnd={() => {
+        syncTargetAndFog();
+        endCameraInteraction(isMobile ? 160 : 80);
+      }}
       onChange={() => {
+        if (isMobile) {
+          const controls = controlsRef.current;
+          if (controls) {
+            const targetY = limits.targetY + viewOffsetY;
+            controls.target.set(0, targetY, 0);
+          }
+          applyZoomAwareFog(scene, camera, limits.targetY + viewOffsetY, fogNear, fogFar);
+        }
         requestSceneRender();
       }}
     />
   );
 }
 
-/** Keeps fog end beyond camera distance so zoom-out does not wash the scene to black. */
-function ZoomAwareFog({
+/** Initial fog setup — updates happen from CameraRig on zoom (no per-frame hook). */
+function SceneFogBootstrap({
   baseNear,
   baseFar,
   targetY,
@@ -236,31 +253,11 @@ function ZoomAwareFog({
 }) {
   const { camera, scene } = useThree();
   const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
-  const target = useMemo(() => new THREE.Vector3(), []);
-  const fogColor = useMemo(() => getSceneSkyColor(), []);
-
-  const apply = () => {
-    target.set(0, targetY + viewOffsetY, 0);
-    const dist = camera.position.distanceTo(target);
-    const far = Math.max(baseFar, dist * 7, baseFar * 1.8);
-    const near = Math.min(baseNear, Math.max(12, dist * 0.22));
-    if (!scene.fog || !(scene.fog instanceof THREE.Fog)) {
-      scene.fog = new THREE.Fog(fogColor.getHex(), near, far);
-    } else {
-      scene.fog.near = near;
-      scene.fog.far = far;
-      scene.fog.color.copy(fogColor);
-    }
-  };
 
   useEffect(() => {
-    apply();
-    requestSceneRender();
-  }, [baseNear, baseFar, targetY, viewOffsetY, fogColor]);
-
-  useFrame(() => {
-    apply();
-  });
+    applyZoomAwareFog(scene, camera, targetY + viewOffsetY, baseNear, baseFar);
+    requestSceneRender(true);
+  }, [baseNear, baseFar, targetY, viewOffsetY, camera, scene]);
 
   return null;
 }
@@ -269,10 +266,14 @@ function CameraSetup({
   limits,
   isMobile,
   staticCamera,
+  fogNear,
+  fogFar,
 }: {
   limits: ReturnType<typeof getCameraLimits>;
   isMobile: boolean;
   staticCamera: boolean;
+  fogNear: number;
+  fogFar: number;
 }) {
   const { camera } = useThree();
 
@@ -288,7 +289,13 @@ function CameraSetup({
   }, [camera, limits.cameraY, limits.cameraZ, limits.fov, limits.fogFar]);
 
   return (
-    <CameraRig limits={limits} isMobile={isMobile} staticCamera={staticCamera} />
+    <CameraRig
+      limits={limits}
+      isMobile={isMobile}
+      staticCamera={staticCamera}
+      fogNear={fogNear}
+      fogFar={fogFar}
+    />
   );
 }
 
@@ -328,6 +335,8 @@ function SceneContent() {
         limits={cameraLimits}
         isMobile={device.isMobile}
         staticCamera={perf.mobileStatic}
+        fogNear={cameraLimits.fogNear}
+        fogFar={fogFar}
       />
       <SceneLighting
         stage={stage}
@@ -368,7 +377,7 @@ function SceneContent() {
         multisampling={perf.bloomMultisampling}
       />
 
-      <ZoomAwareFog
+      <SceneFogBootstrap
         baseNear={cameraLimits.fogNear}
         baseFar={fogFar}
         targetY={cameraLimits.targetY}
@@ -435,7 +444,7 @@ export function GloobloomScene() {
           scene.background = new THREE.Color(SCENE_SKY_HEX);
         }}
       >
-        <AdaptiveDpr pixelated />
+        {!device.isMobile ? <AdaptiveDpr pixelated /> : null}
         <Suspense fallback={null}>
           <SceneContent />
           {tier === "ultra" || tier === "high" ? <Preload all /> : null}

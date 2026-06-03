@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
 import { runMemoryGuard } from "@/lib/memoryGuard";
+import { isCameraInteracting } from "@/lib/sceneRuntime";
 
 /** Samples FPS / frame time and drives adaptive tier + dynamic scale. */
 export function AdaptivePerformanceMonitor() {
@@ -17,7 +18,7 @@ export function AdaptivePerformanceMonitor() {
   const renderStart = useRef(0);
 
   useFrame((_, delta) => {
-    if (sceneFrozen) return;
+    if (sceneFrozen || isCameraInteracting()) return;
     const renderMs = renderStart.current
       ? performance.now() - renderStart.current
       : delta * 1000;

@@ -5,7 +5,11 @@ import { useOrganismStore } from "@/store/useOrganismStore";
 import { useCameraStore } from "@/store/useCameraStore";
 import { getCameraLimits } from "@/lib/plantScale";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
-import { requestSceneRender } from "@/lib/sceneRuntime";
+import {
+  beginCameraInteraction,
+  endCameraInteraction,
+  requestSceneRender,
+} from "@/lib/sceneRuntime";
 
 interface Props {
   containerRef: RefObject<HTMLElement | null>;
@@ -49,12 +53,14 @@ export function MobileTouchPan({ containerRef }: Props) {
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
+        beginCameraInteraction();
         panning = true;
         edgePan = false;
         lastMidY = touchMidY(e.touches);
         return;
       }
       if (e.touches.length === 1 && isEdgePanTouch(e.touches[0]!)) {
+        beginCameraInteraction();
         edgePan = true;
         edgeLastY = e.touches[0]!.clientY;
       }
@@ -91,8 +97,14 @@ export function MobileTouchPan({ containerRef }: Props) {
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) panning = false;
-      if (e.touches.length === 0) edgePan = false;
+      if (e.touches.length < 2) {
+        if (panning) endCameraInteraction(180);
+        panning = false;
+      }
+      if (e.touches.length === 0) {
+        if (edgePan) endCameraInteraction(180);
+        edgePan = false;
+      }
     };
 
     canvas.addEventListener("touchstart", onTouchStart, { passive: true });

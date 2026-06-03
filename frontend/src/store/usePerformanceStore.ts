@@ -100,8 +100,12 @@ function buildSettings(
       enableAtmosphere: false,
       enableHighStageFx: false,
       enableWateringFlames: false,
-      shadows: s.shadows || true,
-      shadowMapSize: s.shadowMapSize > 0 ? s.shadowMapSize : 128,
+      shadows: false,
+      shadowMapSize: 0,
+      labelsMax: 0,
+      enableGiantInsects: false,
+      creatureFrameSkip: 999,
+      enableCreatures: false,
     };
   }
   return s;

@@ -3,9 +3,18 @@
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
 
+const MOBILE_RENDER_MIN_MS = 90;
+const MOBILE_INTERACT_RENDER_MIN_MS = 120;
+let lastMobileRenderMs = 0;
+let mobileRenderTimer: ReturnType<typeof setTimeout> | null = null;
+
 export function isDemandMode(): boolean {
   const perf = usePerformanceStore.getState();
   return perf.isMobile && perf.demandMode;
+}
+
+export function isCameraInteracting(): boolean {
+  return useSceneRuntimeStore.getState().isCameraInteracting;
 }
 
 /** Plant / lighting animation hooks — respects mobileStatic freeze. */
@@ -14,6 +23,7 @@ export function shouldRunAnimationFrames(): boolean {
   if (rt.sceneFrozen) return false;
   if (rt.isScrolling) return false;
   if (rt.uiInteracting) return false;
+  if (rt.isCameraInteracting) return false;
 
   const perf = usePerformanceStore.getState();
   if (perf.settings().mobileStatic) return false;
@@ -21,12 +31,13 @@ export function shouldRunAnimationFrames(): boolean {
   return rt.animationPumpActive;
 }
 
-/** Creature hooks — animate even when the rest of the scene is static. */
+/** Creature hooks — paused while the user pans/zooms the camera. */
 export function shouldRunCreatureFrames(): boolean {
   const rt = useSceneRuntimeStore.getState();
   if (rt.sceneFrozen) return false;
   if (rt.isScrolling) return false;
   if (rt.uiInteracting) return false;
+  if (rt.isCameraInteracting) return false;
 
   const { enableCreatures, creatureFrameSkip } =
     usePerformanceStore.getState().settings();
@@ -35,7 +46,60 @@ export function shouldRunCreatureFrames(): boolean {
   return true;
 }
 
-/** Request a single demand-mode render. */
-export function requestSceneRender(): void {
-  useSceneRuntimeStore.getState().invalidate?.();
+function flushRender() {
+  const inv = useSceneRuntimeStore.getState().invalidate;
+  if (!inv) return;
+  lastMobileRenderMs = performance.now();
+  if (mobileRenderTimer) {
+    clearTimeout(mobileRenderTimer);
+    mobileRenderTimer = null;
+  }
+  inv();
+}
+
+/** Request a demand-mode render (throttled on mobile during camera moves). */
+export function requestSceneRender(force = false): void {
+  const inv = useSceneRuntimeStore.getState().invalidate;
+  if (!inv) return;
+
+  const mobile = usePerformanceStore.getState().isMobile;
+  if (!mobile || force) {
+    flushRender();
+    return;
+  }
+
+  const minMs = isCameraInteracting()
+    ? MOBILE_INTERACT_RENDER_MIN_MS
+    : MOBILE_RENDER_MIN_MS;
+  const now = performance.now();
+  const elapsed = now - lastMobileRenderMs;
+
+  if (elapsed >= minMs) {
+    flushRender();
+    return;
+  }
+
+  if (mobileRenderTimer) return;
+  mobileRenderTimer = setTimeout(() => {
+    mobileRenderTimer = null;
+    flushRender();
+  }, minMs - elapsed);
+}
+
+export function beginCameraInteraction(): void {
+  const rt = useSceneRuntimeStore.getState();
+  if (rt.isCameraInteracting) return;
+  rt.setCameraInteracting(true);
+}
+
+export function endCameraInteraction(delayMs = 140): void {
+  if (useSceneRuntimeStore.getState().cameraInteractionEndTimer) {
+    clearTimeout(useSceneRuntimeStore.getState().cameraInteractionEndTimer!);
+  }
+  const timer = setTimeout(() => {
+    useSceneRuntimeStore.getState().setCameraInteracting(false);
+    useSceneRuntimeStore.getState().setCameraInteractionEndTimer(null);
+    requestSceneRender(true);
+  }, delayMs) as ReturnType<typeof setTimeout>;
+  useSceneRuntimeStore.getState().setCameraInteractionEndTimer(timer);
 }

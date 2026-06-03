@@ -5,20 +5,18 @@ import { useThree } from "@react-three/fiber";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
 import {
-  shouldRunAnimationFrames,
+  requestSceneRender,
   shouldRunCreatureFrames,
 } from "@/lib/sceneRuntime";
 
-/** Mobile demand frameloop: invalidate only when the scene must move. */
+/** Mobile demand frameloop: render on demand only — no continuous RAF pump. */
 export function SceneDemandDriver() {
   const invalidate = useThree((s) => s.invalidate);
   const demandMode = usePerformanceStore((s) => s.demandMode);
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
   const sceneFrozen = useSceneRuntimeStore((s) => s.sceneFrozen);
   const isScrolling = useSceneRuntimeStore((s) => s.isScrolling);
-  const pumpActive = useSceneRuntimeStore((s) => s.animationPumpActive);
-  const ultraLow = usePerformanceStore((s) => s.ultraLow);
-  const rafRef = useRef<number>(0);
-  const lastTick = useRef(0);
+  const idleCreatureRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     useSceneRuntimeStore.getState().registerInvalidate(invalidate);
@@ -27,64 +25,39 @@ export function SceneDemandDriver() {
 
   useEffect(() => {
     if (!demandMode) return;
-    invalidate();
-  }, [demandMode, sceneFrozen, isScrolling, invalidate]);
+    requestSceneRender(true);
+  }, [demandMode, sceneFrozen, isScrolling]);
 
   useEffect(() => {
     if (!demandMode || sceneFrozen || isScrolling) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = 0;
+      if (idleCreatureRef.current) {
+        clearInterval(idleCreatureRef.current);
+        idleCreatureRef.current = null;
+      }
       return;
     }
 
-    const settings = usePerformanceStore.getState().settings();
-    if (settings.mobileStatic) {
-      if (!settings.enableCreatures) {
-        invalidate();
-        return;
+    if (mobileStatic) {
+      if (idleCreatureRef.current) clearInterval(idleCreatureRef.current);
+      const enableCreatures =
+        usePerformanceStore.getState().settings().enableCreatures;
+      if (enableCreatures) {
+        const ms =
+          usePerformanceStore.getState().tier === "ultra_low" ? 6000 : 4500;
+        idleCreatureRef.current = setInterval(() => {
+          if (useSceneRuntimeStore.getState().isCameraInteracting) return;
+          if (!shouldRunCreatureFrames()) return;
+          requestSceneRender(true);
+        }, ms);
       }
-      const creatureFps = ultraLow ? 14 : 18;
-      const interval = 1000 / creatureFps;
-      const loop = (now: number) => {
-        if (now - lastTick.current >= interval && shouldRunCreatureFrames()) {
-          lastTick.current = now;
-          invalidate();
-        }
-        rafRef.current = requestAnimationFrame(loop);
-      };
-      rafRef.current = requestAnimationFrame(loop);
+      requestSceneRender(true);
       return () => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        if (idleCreatureRef.current) clearInterval(idleCreatureRef.current);
       };
     }
 
-    const tier = usePerformanceStore.getState().tier;
-    const targetFps = ultraLow
-      ? 12
-      : tier === "low" || tier === "ultra_low"
-        ? 18
-        : pumpActive
-          ? tier === "ultra" || tier === "high"
-            ? 60
-            : 30
-          : 0;
-    if (targetFps <= 0) return;
-
-    const interval = 1000 / targetFps;
-
-    const loop = (now: number) => {
-      if (now - lastTick.current >= interval && shouldRunAnimationFrames()) {
-        lastTick.current = now;
-        invalidate();
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    };
-
-    rafRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [demandMode, sceneFrozen, isScrolling, pumpActive, ultraLow, invalidate]);
+    return undefined;
+  }, [demandMode, sceneFrozen, isScrolling, mobileStatic]);
 
   return null;
 }

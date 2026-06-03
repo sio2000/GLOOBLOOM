@@ -4,6 +4,8 @@ interface SceneRuntimeState {
   sceneFrozen: boolean;
   isScrolling: boolean;
   uiInteracting: boolean;
+  isCameraInteracting: boolean;
+  cameraInteractionEndTimer: ReturnType<typeof setTimeout> | null;
   animationPumpActive: boolean;
   invalidate: (() => void) | null;
   registerInvalidate: (fn: () => void) => void;
@@ -11,12 +13,16 @@ interface SceneRuntimeState {
   setUiInteracting: (v: boolean) => void;
   setSceneFrozen: (v: boolean) => void;
   setAnimationPump: (v: boolean) => void;
+  setCameraInteracting: (v: boolean) => void;
+  setCameraInteractionEndTimer: (t: ReturnType<typeof setTimeout> | null) => void;
 }
 
-export const useSceneRuntimeStore = create<SceneRuntimeState>((set, get) => ({
+export const useSceneRuntimeStore = create<SceneRuntimeState>((set) => ({
   sceneFrozen: false,
   isScrolling: false,
   uiInteracting: false,
+  isCameraInteracting: false,
+  cameraInteractionEndTimer: null,
   animationPumpActive: true,
   invalidate: null,
 
@@ -29,4 +35,8 @@ export const useSceneRuntimeStore = create<SceneRuntimeState>((set, get) => ({
   setSceneFrozen: (v) => set({ sceneFrozen: v }),
 
   setAnimationPump: (v) => set({ animationPumpActive: v }),
+
+  setCameraInteracting: (v) => set({ isCameraInteracting: v }),
+
+  setCameraInteractionEndTimer: (t) => set({ cameraInteractionEndTimer: t }),
 }));
