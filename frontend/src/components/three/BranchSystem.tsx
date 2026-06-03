@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
-import { STAGE_COLORS } from "@/types/organism";
+import { getStageColor } from "@/types/organism";
 import { getTrunkMetrics } from "@/lib/plantScale";
 
 interface Props {
@@ -52,7 +52,7 @@ function LeafCluster({ color, accent, stage }: {
   const phase = useMemo(() => Math.random() * Math.PI * 2, []);
   const leafCount = Math.min(3 + Math.floor(stage / 8), 8);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     // Gentle leaf sway at higher stages
     if (stage >= 20) {
@@ -97,7 +97,7 @@ function Branch({ def, colors, hydration, decay, stage, growth }: {
 }) {
   const grp = useRef<THREE.Group>(null);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime;
     const swayAmount = 0.04 + Math.min(stage, 60) * 0.001;
@@ -181,7 +181,7 @@ function ChildBranch({ index, parentLen, colors, hydration, stage, phase }: {
   // Child branches always green — stage color only on bud tips
   const branchCol = "#1e5c0e";
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     ref.current.rotation.z = Math.sin(clock.elapsedTime * 0.7 + phase) * 0.065;
   });
@@ -205,7 +205,7 @@ function ChildBranch({ index, parentLen, colors, hydration, stage, phase }: {
 
 export function BranchSystem({ stage, growth, hydration, decay }: Props) {
   const branches = useBranchDefs(stage, growth);
-  const colors   = STAGE_COLORS[Math.min(Math.max(stage, 1), 100)] ?? STAGE_COLORS[1]!;
+  const colors   = getStageColor(stage);
 
   if (stage < 1) return null;
 

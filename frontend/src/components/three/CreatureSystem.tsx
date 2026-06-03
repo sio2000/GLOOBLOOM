@@ -1,10 +1,17 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useThrottledFrame } from "@/hooks/useThrottledFrame";
+import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import * as THREE from "three";
-import { STAGE_COLORS } from "@/types/organism";
+import { getStageColor } from "@/types/organism";
+import { clampStage, extendedScaleMultiplier } from "@/lib/stageConstants";
 import { getPlantWorldBounds } from "@/lib/plantScale";
+import { createFlightProfile, sampleFlight } from "@/lib/insectFlight";
+import {
+  applyPlantAvoidance,
+  buildPlantFlightBounds,
+  type PlantFlightBounds,
+} from "@/lib/plantFlightAvoidance";
 
 interface Props {
   stage: number;
@@ -17,22 +24,21 @@ interface Props {
 // ─────────────────────────────────────────────────────────
 // FIREFLY — stage 3+
 // ─────────────────────────────────────────────────────────
-function Firefly({ seed, color, plantHeight, centerY }: { seed: number; color: string; plantHeight: number; centerY: number }) {
+function Firefly({ seed, color, plantHeight, centerY, stage, growth }: { seed: number; color: string; plantHeight: number; centerY: number; stage: number; growth: number }) {
   const ref   = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const phase = seed * 6.28;
-  const spd   = 0.38 + (seed % 7) * 0.08;
-  const r     = 1.0 + (seed % 5) * 0.35 + plantHeight * 0.04;
-  const maxH  = plantHeight * (0.35 + (seed % 5) * 0.08);
+  const spd   = 0.28 + (seed % 7) * 0.05;
+  const flight = useMemo(
+    () => createFlightProfile(seed, plantHeight, centerY, spd, "drift", 0.48, stage, growth),
+    [seed, plantHeight, centerY, spd, stage, growth]
+  );
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current || !matRef.current) return;
+    const { pos } = sampleFlight(flight, clock);
+    ref.current.position.copy(pos);
     const t = clock.elapsedTime * spd + phase;
-    ref.current.position.set(
-      Math.sin(t * 0.9) * r,
-      centerY + 0.3 + Math.abs(Math.sin(t * 0.55)) * maxH,
-      Math.cos(t * 0.75) * r,
-    );
     // Blink: bright but NOT above bloom threshold (< 0.92)
     matRef.current.emissiveIntensity = Math.sin(t * 3.5 + phase) > 0.1 ? 0.70 : 0.06;
   });
@@ -52,30 +58,25 @@ function Firefly({ seed, color, plantHeight, centerY }: { seed: number; color: s
 const DRAGONFLY_WING = new THREE.PlaneGeometry(0.16, 0.045, 2, 2);
 const DRAGONFLY_BODY = new THREE.CapsuleGeometry(0.006, 0.10, 4, 6);
 
-function Dragonfly({ seed, color, plantHeight, centerY }: { seed: number; color: string; plantHeight: number; centerY: number }) {
+function Dragonfly({ seed, color, plantHeight, centerY, stage, growth }: { seed: number; color: string; plantHeight: number; centerY: number; stage: number; growth: number }) {
   const grp  = useRef<THREE.Group>(null);
   const w1   = useRef<THREE.Mesh>(null);
   const w2   = useRef<THREE.Mesh>(null);
   const w3   = useRef<THREE.Mesh>(null);
   const w4   = useRef<THREE.Mesh>(null);
   const phase = seed * 2.7;
-  const spd   = 0.7 + (seed % 5) * 0.15;
-  const r     = 1.2 + (seed % 4) * 0.4 + plantHeight * 0.05;
-  const maxH  = plantHeight * (0.3 + (seed % 4) * 0.07);
+  const spd   = 0.48 + (seed % 5) * 0.1;
+  const flight = useMemo(
+    () => createFlightProfile(seed, plantHeight, centerY, spd, "zigzag", 0.55, stage, growth),
+    [seed, plantHeight, centerY, spd, stage, growth]
+  );
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
-    const t    = clock.elapsedTime * spd + phase;
-    const flap = Math.sin(clock.elapsedTime * 18 + phase) * 0.7;
-    grp.current.position.set(
-      Math.cos(t * 0.8) * r + Math.sin(t * 2.1) * 0.3,
-      centerY + 0.5 + Math.abs(Math.sin(t * 0.4)) * maxH + Math.sin(clock.elapsedTime * 3) * 0.1,
-      Math.sin(t * 0.8) * r,
-    );
-    grp.current.rotation.y = Math.atan2(
-      Math.sin(t * 0.8) * r - grp.current.position.z,
-      Math.cos(t * 0.8) * r - grp.current.position.x,
-    );
+    const { pos, yaw } = sampleFlight(flight, clock);
+    const flap = Math.sin(clock.elapsedTime * 11 + phase) * 0.7;
+    grp.current.position.copy(pos);
+    grp.current.rotation.y = yaw;
     [w1, w2, w3, w4].forEach((w, i) => {
       if (w.current) w.current.rotation.y = (i < 2 ? 1 : -1) * flap * (i % 2 === 0 ? 1 : 0.8);
     });
@@ -123,25 +124,23 @@ function Dragonfly({ seed, color, plantHeight, centerY }: { seed: number; color:
 // ─────────────────────────────────────────────────────────
 const WING_GEO = new THREE.PlaneGeometry(0.14, 0.10, 3, 3);
 
-function Butterfly({ seed, color, accent, plantHeight, centerY }: { seed: number; color: string; accent: string; plantHeight: number; centerY: number }) {
+function Butterfly({ seed, color, accent, plantHeight, centerY, stage, growth }: { seed: number; color: string; accent: string; plantHeight: number; centerY: number; stage: number; growth: number }) {
   const grp  = useRef<THREE.Group>(null);
   const wL   = useRef<THREE.Mesh>(null);
   const wR   = useRef<THREE.Mesh>(null);
   const phase = seed * 2.1;
-  const spd   = 0.45 + (seed % 5) * 0.07;
-  const r     = 1.4 + (seed % 6) * 0.35 + plantHeight * 0.05;
-  const maxH  = plantHeight * (0.35 + (seed % 4) * 0.08);
+  const spd   = 0.36 + (seed % 5) * 0.05;
+  const flight = useMemo(
+    () => createFlightProfile(seed, plantHeight, centerY, spd, "lissajous", 0.5, stage, growth),
+    [seed, plantHeight, centerY, spd, stage, growth]
+  );
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
-    const t    = clock.elapsedTime * spd + phase;
-    const flap = Math.sin(clock.elapsedTime * 7 + phase) * 0.65;
-    grp.current.position.set(
-      Math.cos(t * 0.55) * r,
-      centerY + 0.8 + Math.abs(Math.sin(t * 0.38 + 1.5)) * maxH,
-      Math.sin(t * 0.55) * r,
-    );
-    grp.current.rotation.y = t * 0.55 + Math.PI / 2;
+    const { pos, yaw } = sampleFlight(flight, clock);
+    const flap = Math.sin(clock.elapsedTime * 4.5 + phase) * 0.65;
+    grp.current.position.copy(pos);
+    grp.current.rotation.y = yaw + Math.PI / 2;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
   });
@@ -167,14 +166,16 @@ function Butterfly({ seed, color, accent, plantHeight, centerY }: { seed: number
 // ─────────────────────────────────────────────────────────
 // DREAM MOTH — stage 28+
 // ─────────────────────────────────────────────────────────
-function DreamMoth({ seed, color, plantHeight, centerY }: { seed: number; color: string; plantHeight: number; centerY: number }) {
+function DreamMoth({ seed, color, plantHeight, centerY, stage, growth }: { seed: number; color: string; plantHeight: number; centerY: number; stage: number; growth: number }) {
   const grp   = useRef<THREE.Group>(null);
   const wL    = useRef<THREE.Mesh>(null);
   const wR    = useRef<THREE.Mesh>(null);
   const phase = seed * 3.1;
-  const spd   = 0.22 + (seed % 4) * 0.06;
-  const r     = 1.8 + (seed % 5) * 0.4 + plantHeight * 0.06;
-  const maxH  = plantHeight * (0.4 + (seed % 3) * 0.08);
+  const spd   = 0.32 + (seed % 4) * 0.06;
+  const flight = useMemo(
+    () => createFlightProfile(seed, plantHeight, centerY, spd, "wave", 0.58, stage, growth),
+    [seed, plantHeight, centerY, spd, stage, growth]
+  );
 
   const wingGeo = useMemo(() => {
     const g = new THREE.PlaneGeometry(0.20, 0.13, 4, 4);
@@ -185,16 +186,12 @@ function DreamMoth({ seed, color, plantHeight, centerY }: { seed: number; color:
     return g;
   }, []);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
-    const t    = clock.elapsedTime * spd + phase;
+    const { pos, yaw } = sampleFlight(flight, clock);
     const flap = Math.sin(clock.elapsedTime * 4.5 + phase) * 0.55;
-    grp.current.position.set(
-      Math.cos(t) * r,
-      centerY + 1.2 + Math.abs(Math.sin(t * 0.4)) * maxH,
-      Math.sin(t) * r,
-    );
-    grp.current.rotation.y = t + Math.PI / 2;
+    grp.current.position.copy(pos);
+    grp.current.rotation.y = yaw + Math.PI / 2;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
   });
@@ -220,15 +217,15 @@ function DreamMoth({ seed, color, plantHeight, centerY }: { seed: number; color:
 // ─────────────────────────────────────────────────────────
 // WILL-O-WISP — stage 30+  (drifting luminous orbs)
 // ─────────────────────────────────────────────────────────
-function WillOWisp({ seed, color, plantHeight, centerY }: { seed: number; color: string; plantHeight: number; centerY: number }) {
+function WillOWisp({ seed, color, plantHeight, centerY, flightBounds }: { seed: number; color: string; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds }) {
   const ref   = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const phase = seed * 4.2;
-  const spd   = 0.12 + (seed % 5) * 0.04;
+  const spd   = 0.18 + (seed % 5) * 0.04;
   const maxH  = plantHeight * (0.5 + (seed % 4) * 0.1);
-  const r     = 0.8 + (seed % 5) * 0.5 + plantHeight * 0.04;
+  const r     = Math.max(1.8, 0.8 + (seed % 5) * 0.5 + plantHeight * 0.06);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current || !matRef.current) return;
     const t = clock.elapsedTime * spd + phase;
     ref.current.position.set(
@@ -236,6 +233,7 @@ function WillOWisp({ seed, color, plantHeight, centerY }: { seed: number; color:
       centerY + 0.5 + ((clock.elapsedTime * spd * 0.3 + phase * 0.5) % maxH),
       Math.cos(t * 0.6) * r + Math.cos(t * 2.1) * r * 0.3,
     );
+    applyPlantAvoidance(ref.current.position, flightBounds);
     // Pulse between bright and dim — never above 0.85
     matRef.current.emissiveIntensity = 0.50 + Math.sin(clock.elapsedTime * 2.2 + phase) * 0.28;
   });
@@ -252,21 +250,22 @@ function WillOWisp({ seed, color, plantHeight, centerY }: { seed: number; color:
 // ─────────────────────────────────────────────────────────
 // JELLYFISH SPORE — stage 40+
 // ─────────────────────────────────────────────────────────
-function JellyfishSpore({ seed, color, plantHeight, centerY }: { seed: number; color: string; plantHeight: number; centerY: number }) {
+function JellyfishSpore({ seed, color, plantHeight, centerY, flightBounds }: { seed: number; color: string; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds }) {
   const grp   = useRef<THREE.Group>(null);
   const phase = seed * 2.7;
-  const spd   = 0.18 + (seed % 5) * 0.04;
+  const spd   = 0.24 + (seed % 5) * 0.04;
   const maxH  = plantHeight * (0.55 + (seed % 3) * 0.1);
-  const startX = (seed % 7 - 3.5) * 0.65;
-  const startZ = ((seed * 3) % 7 - 3.5) * 0.65;
+  const startX = (seed % 7 - 3.5) * 1.2;
+  const startZ = ((seed * 3) % 7 - 3.5) * 1.2;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
-    grp.current.position.x = startX + Math.sin(t * 0.7) * 0.55;
+    grp.current.position.x = startX + Math.sin(t * 0.7) * 0.85;
     grp.current.position.y = centerY + ((clock.elapsedTime * 0.07 * spd + phase * 0.5) % maxH) + 0.2;
-    grp.current.position.z = startZ + Math.cos(t * 0.6) * 0.55;
+    grp.current.position.z = startZ + Math.cos(t * 0.6) * 0.85;
     grp.current.rotation.y = clock.elapsedTime * 0.12;
+    applyPlantAvoidance(grp.current.position, flightBounds);
   });
 
   return (
@@ -298,17 +297,17 @@ function JellyfishSpore({ seed, color, plantHeight, centerY }: { seed: number; c
 // ─────────────────────────────────────────────────────────
 // UFO DISC — stage 45+  (futuristic orbiting craft)
 // ─────────────────────────────────────────────────────────
-function UFODisc({ seed, color, accent, plantHeight, centerY }: {
-  seed: number; color: string; accent: string; plantHeight: number; centerY: number;
+function UFODisc({ seed, color, accent, plantHeight, centerY, flightBounds }: {
+  seed: number; color: string; accent: string; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds;
 }) {
   const grp   = useRef<THREE.Group>(null);
   const domeRef = useRef<THREE.Mesh>(null);
   const phase = seed * 1.4;
-  const spd   = 0.10 + (seed % 4) * 0.04;
-  const r     = 2.2 + seed * 0.6 + plantHeight * 0.08;
+  const spd   = 0.14 + (seed % 4) * 0.04;
+  const r     = Math.max(3.5, 2.2 + seed * 0.6 + plantHeight * 0.12);
   const orbitH = centerY + plantHeight * (0.55 + seed * 0.05);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
     grp.current.position.set(
@@ -316,6 +315,7 @@ function UFODisc({ seed, color, accent, plantHeight, centerY }: {
       orbitH + Math.sin(t * 0.3) * 0.8,
       Math.sin(t) * r,
     );
+    applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t + Math.PI / 2;
     if (domeRef.current) {
       // Dome pulses
@@ -361,24 +361,25 @@ function UFODisc({ seed, color, accent, plantHeight, centerY }: {
 // ─────────────────────────────────────────────────────────
 // COSMIC BIRD — stage 55+
 // ─────────────────────────────────────────────────────────
-function CosmicBird({ seed, color, plantHeight, centerY }: { seed: number; color: string; plantHeight: number; centerY: number }) {
+function CosmicBird({ seed, color, plantHeight, centerY, flightBounds }: { seed: number; color: string; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds }) {
   const grp   = useRef<THREE.Group>(null);
   const wL    = useRef<THREE.Mesh>(null);
   const wR    = useRef<THREE.Mesh>(null);
   const phase = seed * 1.9;
-  const spd   = 0.15 + (seed % 3) * 0.05;
-  const r     = 2.8 + seed * 0.4 + plantHeight * 0.1;
+  const spd   = 0.2 + (seed % 3) * 0.05;
+  const r     = Math.max(4, 2.8 + seed * 0.4 + plantHeight * 0.14);
   const orbitH = centerY + plantHeight * (0.6 + seed * 0.04);
 
   const wingGeo = useMemo(() => new THREE.PlaneGeometry(0.32, 0.12, 5, 3), []);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const t    = clock.elapsedTime * spd + phase;
     const flap = Math.sin(clock.elapsedTime * 2.8 + phase) * 0.38;
     grp.current.position.set(
       Math.cos(t) * r, orbitH + Math.sin(t * 0.3) * 0.8, Math.sin(t) * r,
     );
+    applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t + Math.PI / 2;
     if (wL.current) { wL.current.rotation.y = flap;  wL.current.rotation.z = -flap * 0.2; }
     if (wR.current) { wR.current.rotation.y = -flap; wR.current.rotation.z = flap * 0.2; }
@@ -405,18 +406,19 @@ function CosmicBird({ seed, color, plantHeight, centerY }: { seed: number; color
 // ─────────────────────────────────────────────────────────
 // PLASMA RING — stage 70+  (spinning energy ring)
 // ─────────────────────────────────────────────────────────
-function PlasmaRing({ seed, color, accent, plantHeight, centerY }: {
-  seed: number; color: string; accent: string; plantHeight: number; centerY: number;
+function PlasmaRing({ seed, color, accent, plantHeight, centerY, flightBounds }: {
+  seed: number; color: string; accent: string; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds;
 }) {
   const ref   = useRef<THREE.Mesh>(null);
   const phase = seed * 3.0;
-  const r     = 1.8 + seed * 0.5 + plantHeight * 0.06;
+  const r     = Math.max(3.2, 1.8 + seed * 0.5 + plantHeight * 0.1);
   const orbitH = centerY + plantHeight * (0.65 + seed * 0.04);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
-    const t = clock.elapsedTime * 0.18 + phase;
+    const t = clock.elapsedTime * 0.24 + phase;
     ref.current.position.set(Math.cos(t) * r, orbitH, Math.sin(t) * r);
+    applyPlantAvoidance(ref.current.position, flightBounds);
     ref.current.rotation.x += 0.025;
     ref.current.rotation.y += 0.015;
     (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
@@ -435,20 +437,20 @@ function PlasmaRing({ seed, color, accent, plantHeight, centerY }: {
 // ─────────────────────────────────────────────────────────
 // GIANT SCARAB BEETLE — stage 50+  (large, unmistakable)
 // ─────────────────────────────────────────────────────────
-function GiantScarabBeetle({ seed, plantHeight, centerY }: {
-  seed: number; plantHeight: number; centerY: number;
+function GiantScarabBeetle({ seed, plantHeight, centerY, flightBounds }: {
+  seed: number; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds;
 }) {
   const grp = useRef<THREE.Group>(null);
   const wingL = useRef<THREE.Mesh>(null);
   const wingR = useRef<THREE.Mesh>(null);
   const phase = seed * 1.6;
-  const spd = 0.22 + seed * 0.04;
-  const r = 4 + seed * 1.5 + plantHeight * 0.1;
+  const spd = 0.28 + seed * 0.04;
+  const r = Math.max(5, 4 + seed * 1.5 + plantHeight * 0.14);
   const scale = 1.3 + (seed % 3) * 0.4;
   const bodyCol = "#1a5020";
   const shellCol = "#2a7840";
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
     const flap = Math.sin(clock.elapsedTime * 5 + phase) * 0.5;
@@ -457,6 +459,7 @@ function GiantScarabBeetle({ seed, plantHeight, centerY }: {
       centerY + plantHeight * (0.25 + Math.abs(Math.sin(t * 0.35)) * 0.55),
       Math.sin(t) * r
     );
+    applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t + Math.PI / 2;
     if (wingL.current) wingL.current.rotation.z = flap;
     if (wingR.current) wingR.current.rotation.z = -flap;
@@ -515,15 +518,15 @@ function GiantScarabBeetle({ seed, plantHeight, centerY }: {
 // ─────────────────────────────────────────────────────────
 // GIANT LUNA MOTH — stage 55+  (huge pale green wings + eyespots)
 // ─────────────────────────────────────────────────────────
-function GiantLunaMoth({ seed, plantHeight, centerY }: {
-  seed: number; plantHeight: number; centerY: number;
+function GiantLunaMoth({ seed, plantHeight, centerY, flightBounds }: {
+  seed: number; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds;
 }) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
   const phase = seed * 2.2;
-  const spd = 0.18 + seed * 0.03;
-  const r = 5 + seed * 1.2 + plantHeight * 0.12;
+  const spd = 0.24 + seed * 0.03;
+  const r = Math.max(6, 5 + seed * 1.2 + plantHeight * 0.14);
   const scale = 1.6 + (seed % 2) * 0.5;
 
   const wingGeo = useMemo(() => {
@@ -535,7 +538,7 @@ function GiantLunaMoth({ seed, plantHeight, centerY }: {
     return g;
   }, []);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
     const flap = Math.sin(clock.elapsedTime * 3.5 + phase) * 0.45;
@@ -544,6 +547,7 @@ function GiantLunaMoth({ seed, plantHeight, centerY }: {
       centerY + plantHeight * (0.4 + Math.abs(Math.sin(t * 0.3)) * 0.45),
       Math.sin(t * 0.6) * r
     );
+    applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = t * 0.6;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
@@ -584,18 +588,18 @@ function GiantLunaMoth({ seed, plantHeight, centerY }: {
 // ─────────────────────────────────────────────────────────
 // GIANT HORNET — stage 62+  (yellow-black, unmistakable)
 // ─────────────────────────────────────────────────────────
-function GiantHornet({ seed, plantHeight, centerY }: {
-  seed: number; plantHeight: number; centerY: number;
+function GiantHornet({ seed, plantHeight, centerY, flightBounds }: {
+  seed: number; plantHeight: number; centerY: number; flightBounds: PlantFlightBounds;
 }) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
   const phase = seed * 1.8;
-  const spd = 0.35 + seed * 0.05;
-  const r = 3.5 + seed * 1.0 + plantHeight * 0.08;
+  const spd = 0.42 + seed * 0.05;
+  const r = Math.max(4.5, 3.5 + seed * 1.0 + plantHeight * 0.12);
   const scale = 1.4 + (seed % 2) * 0.3;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime * spd + phase;
     const flap = Math.sin(clock.elapsedTime * 14 + phase) * 0.6;
@@ -604,6 +608,7 @@ function GiantHornet({ seed, plantHeight, centerY }: {
       centerY + plantHeight * (0.3 + Math.abs(Math.sin(t * 0.5)) * 0.5),
       Math.sin(t) * r
     );
+    applyPlantAvoidance(grp.current.position, flightBounds);
     grp.current.rotation.y = Math.atan2(Math.sin(t) * r - grp.current.position.z, Math.cos(t) * r - grp.current.position.x);
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
@@ -658,18 +663,21 @@ function GiantHornet({ seed, plantHeight, centerY }: {
 // Main export — renders creatures based on current stage
 // ─────────────────────────────────────────────────────────
 export function CreatureSystem({ stage, hydration, activeCreatures, heightScale, growth }: Props) {
-  const s = Math.min(Math.max(stage, 1), 100);
-  const colors = STAGE_COLORS[s] ?? STAGE_COLORS[1]!;
+  const s = clampStage(stage);
+  const extMul = extendedScaleMultiplier(stage);
+  const colors = getStageColor(s);
   const bounds = getPlantWorldBounds(s, growth);
   const { worldHeight: plantHeight, centerY } = bounds;
+  const flightBounds = useMemo(() => buildPlantFlightBounds(s, growth), [s, growth]);
 
   const highTier = s >= 50;
-  const fireflyCount    = s >= 3  ? Math.min(2 + Math.floor(s * 0.15), highTier ? 22 : 14) : 0;
-  const dragonflyCount  = s >= 10 ? Math.min(Math.floor((s - 10) * 0.12) + 1, highTier ? 12 : 6) : 0;
-  const wispCount       = s >= 30 ? Math.min(Math.floor((s - 30) * 0.10) + 1, highTier ? 10 : 5) : 0;
-  const butterflyCount  = s >= 18 ? Math.min(Math.floor((s - 18) * 0.14) + 1, highTier ? 14 : 8) : 0;
-  const mothCount       = s >= 28 ? Math.min(Math.floor((s - 28) * 0.10) + 1, highTier ? 12 : 6) : 0;
-  const jellyfishCount  = s >= 40 ? Math.min(Math.floor((s - 40) * 0.12) + 1, highTier ? 14 : 7) : 0;
+  const extBonus = s >= 101 ? Math.floor((s - 100) / 12) : 0;
+  const fireflyCount    = s >= 3  ? Math.min(2 + Math.floor(s * 0.11) + extBonus, highTier ? 24 : 15) : 0;
+  const dragonflyCount  = s >= 10 ? Math.min(Math.floor((s - 10) * 0.09) + 1 + extBonus, highTier ? 12 : 7) : 0;
+  const wispCount       = s >= 30 ? Math.min(Math.floor((s - 30) * 0.08) + 1, highTier ? 7 : 4) : 0;
+  const butterflyCount  = s >= 18 ? Math.min(Math.floor((s - 18) * 0.1) + 1, highTier ? 10 : 6) : 0;
+  const mothCount       = s >= 28 ? Math.min(Math.floor((s - 28) * 0.08) + 1, highTier ? 8 : 5) : 0;
+  const jellyfishCount  = s >= 40 ? Math.min(Math.floor((s - 40) * 0.09) + 1, highTier ? 10 : 5) : 0;
   const ufoCount        = s >= 45 ? Math.min(Math.floor((s - 45) * 0.06) + 1, highTier ? 8 : 4) : 0;
   const birdCount       = s >= 55 ? Math.min(Math.floor((s - 55) * 0.08) + 1, highTier ? 8 : 4) : 0;
   const plasmaCount     = s >= 70 ? Math.min(Math.floor((s - 70) * 0.07) + 1, highTier ? 8 : 4) : 0;
@@ -677,7 +685,7 @@ export function CreatureSystem({ stage, hydration, activeCreatures, heightScale,
   const lunaMothCount   = s >= 55 ? Math.min(1 + Math.floor((s - 55) / 10), 4) : 0;
   const hornetCount     = s >= 62 ? Math.min(1 + Math.floor((s - 62) / 12), 3) : 0;
 
-  const creatureProps = { plantHeight, centerY };
+  const creatureProps = { plantHeight, centerY, stage: s, growth, flightBounds };
 
   // ── Each creature type has its own distinct colour ──────────────────────
   // This ensures you can immediately tell WHAT you're looking at.

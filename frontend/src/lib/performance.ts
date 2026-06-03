@@ -17,6 +17,8 @@ export interface QualitySettings {
   frameSkip: number;
   /** Scale geometry segment counts (0.4–1) */
   geoQuality: number;
+  /** Scale animation time — slower motion on weak devices, same scene content */
+  animTimeScale: number;
 }
 
 const TIER_ORDER: QualityTier[] = ["low", "medium", "high"];
@@ -28,7 +30,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     shadows: false,
     shadowMapSize: 0,
     antialias: false,
-    bloom: false,
+    bloom: true,
     bloomMultisampling: 0,
     starsMultiplier: 0.3,
     sporeMultiplier: 0.4,
@@ -36,6 +38,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     seasonParticleMultiplier: 0.4,
     frameSkip: 3,
     geoQuality: 0.45,
+    animTimeScale: 0.38,
   },
   medium: {
     tier: "medium",
@@ -51,6 +54,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     seasonParticleMultiplier: 0.65,
     frameSkip: 2,
     geoQuality: 0.72,
+    animTimeScale: 0.68,
   },
   high: {
     tier: "high",
@@ -66,6 +70,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     seasonParticleMultiplier: 1,
     frameSkip: 1,
     geoQuality: 1,
+    animTimeScale: 1,
   },
 };
 

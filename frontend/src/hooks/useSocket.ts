@@ -129,5 +129,15 @@ export function useSocket() {
     });
   };
 
-  return { water, addLeaf };
+  const postComment = (username: string, message: string) => {
+    const socket = socketRef.current ?? socketInstance;
+    if (!socket) return;
+    socket.emit("post_comment", {
+      username: username || "Anonymous",
+      message,
+      sessionId: getOrCreateSessionId(),
+    });
+  };
+
+  return { water, addLeaf, postComment };
 }

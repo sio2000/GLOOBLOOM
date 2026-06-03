@@ -175,7 +175,7 @@ void main(){
 
   // ── Stage shimmer (stage 40+) ───────────────────────────
   if(uStage >= 40.0){
-    float t2 = (uStage - 40.0) / 60.0; // 0→1 from stage 40→100
+    float t2 = clamp((uStage - 40.0) / 360.0, 0.0, 1.0); // 0→1 from stage 40→400
     float shimmer = sin(vWorldPos.x * 4.0 + uTime * 0.8) * 0.5 + 0.5;
     shimmer *= sin(vWorldPos.z * 3.0 - uTime * 0.5) * 0.5 + 0.5;
     base += uColorAccent * shimmer * 0.12 * t2;

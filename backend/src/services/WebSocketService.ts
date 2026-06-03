@@ -3,6 +3,7 @@ import { Server as HttpServer } from "http";
 import { OrganismService } from "./OrganismService.js";
 import { getCorsOrigins } from "../lib/corsOrigins.js";
 import { ClientToServerEvents, ServerToClientEvents } from "../types/index.js";
+import { isPaymentGateActive } from "../lib/requirePayments.js";
 
 interface InterServerEvents {}
 interface SocketData {
@@ -53,6 +54,10 @@ export class WebSocketService {
       this.broadcastOnlineCount();
 
       socket.on("water", async (data) => {
+        if (isPaymentGateActive()) {
+          socket.emit("payment_required", { action: "water" });
+          return;
+        }
         try {
           const username = data.username?.trim() || "Anonymous";
           socket.data.username = username;
@@ -67,12 +72,33 @@ export class WebSocketService {
       });
 
       socket.on("add_leaf", async (data) => {
+        if (isPaymentGateActive()) {
+          socket.emit("payment_required", { action: "leaf" });
+          return;
+        }
         try {
           const username = data.username?.trim() || "Anonymous";
           socket.data.username = username;
           await this.organism.addLeaf(username, sessionId);
         } catch (err) {
           console.error("[WS] add_leaf error:", err);
+        }
+      });
+
+      socket.on("post_comment", async (data) => {
+        if (isPaymentGateActive()) {
+          socket.emit("payment_required", { action: "comment" });
+          return;
+        }
+        try {
+          const username = data.username?.trim() || "Anonymous";
+          const message = data.message?.trim() ?? "";
+          socket.data.username = username;
+          const entry = this.onlineUsers.get(sessionId);
+          if (entry) entry.username = username;
+          await this.organism.postComment(username, message);
+        } catch (err) {
+          console.error("[WS] post_comment error:", err);
         }
       });
 

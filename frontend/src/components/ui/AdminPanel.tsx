@@ -72,7 +72,7 @@ export function AdminPanel() {
             onClick={() => setShow(false)}
           />
           <motion.div
-            className="fixed right-4 top-16 z-50 w-72"
+            className="fixed right-4 top-16 max-sm:inset-x-2 max-sm:top-auto max-sm:bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 w-72 max-sm:w-auto"
             initial={{ opacity: 0, x: 30, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 30 }}

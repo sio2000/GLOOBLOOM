@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { LeafData } from "@/types/organism";
@@ -54,7 +54,7 @@ function NameLeaf({ leaf }: { leaf: LeafData }) {
     [leafColor]
   );
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!grpRef.current) return;
     const t = clock.elapsedTime;
     grpRef.current.position.y = leaf.posY + Math.sin(t * 0.5 + phase) * 0.012;

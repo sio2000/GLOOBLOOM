@@ -26,7 +26,8 @@ export type ActivityType =
   | "season"
   | "milestone"
   | "rare_event"
-  | "micro_evolution";
+  | "micro_evolution"
+  | "comment";
 
 export interface OrganismState {
   id: string;
@@ -85,11 +86,13 @@ export interface ServerToClientEvents {
   micro_evolution: (data: { message: string; waterings: number }) => void;
   season_change: (season: Season) => void;
   rare_event: (data: { name: string; description: string }) => void;
+  payment_required: (data: { action: "water" | "leaf" | "comment" }) => void;
 }
 
 export interface ClientToServerEvents {
   water: (data: WateringEvent) => void;
   add_leaf: (data: { username: string; sessionId: string }) => void;
+  post_comment: (data: { username: string; message: string; sessionId: string }) => void;
   ping: () => void;
 }
 

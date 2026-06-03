@@ -50,7 +50,7 @@ export function LoadingScreen({ isLoading }: Props) {
           </div>
 
           <motion.h1
-            className="text-3xl font-display font-bold tracking-[0.3em] text-green-300/80 mb-3"
+            className="text-2xl max-sm:text-xl sm:text-3xl font-display font-bold tracking-[0.2em] max-sm:tracking-[0.12em] text-green-300/80 mb-3 px-4 text-center"
             animate={{ opacity: [0.6, 1, 0.6] }}
             transition={{ duration: 2.5, repeat: Infinity }}
           >

@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from "react";
 import * as THREE from "three";
-import { STAGE_COLORS } from "@/types/organism";
+import { getStageColor } from "@/types/organism";
 import { getPlantWorldBounds } from "@/lib/plantScale";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
@@ -94,10 +94,47 @@ const SOLAR_PLANETS: PlanetDef[] = [
   },
 ];
 
+function planetRand(seed: number): number {
+  const x = Math.sin(seed * 127.1 + seed * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+interface PlanetAnchor {
+  baseX: number;
+  baseZ: number;
+  baseY: number;
+  driftR: number;
+  driftSpeed: number;
+  driftPhase: number;
+  wobbleAmp: number;
+  wobbleFreq: number;
+}
+
+function buildPlanetAnchor(
+  def: PlanetDef,
+  plantTop: number,
+  plantHeight: number
+): PlanetAnchor {
+  const s = def.unlockStage * 17 + def.orbitPhase * 100;
+  const r = (n: number) => planetRand(s + n);
+  const floorY = plantTop + 2.5 + def.radius * 2;
+
+  return {
+    baseX: (r(1) - 0.5) * (16 + plantHeight * 0.42),
+    baseZ: (r(2) - 0.5) * (14 + plantHeight * 0.38) - 5 - r(3) * 8,
+    baseY: floorY + r(4) * (plantHeight * 0.42 + 14) + def.orbitRadius * 0.12,
+    driftR: 3 + r(5) * (def.orbitRadius * 0.32 + 6),
+    driftSpeed: def.orbitSpeed * (0.45 + r(6) * 1.35),
+    driftPhase: def.orbitPhase + r(7) * Math.PI * 2,
+    wobbleAmp: 1 + r(8) * 3.5,
+    wobbleFreq: 0.35 + r(9) * 1.1,
+  };
+}
+
 function SolarSystemPlanet({
-  def, stage, plantHeight, centerY,
+  def, stage, plantHeight, plantTop,
 }: {
-  def: PlanetDef; stage: number; plantHeight: number; centerY: number;
+  def: PlanetDef; stage: number; plantHeight: number; plantTop: number;
 }) {
   const grpRef = useRef<THREE.Group>(null);
   const lightRef = useRef<THREE.PointLight>(null);
@@ -107,18 +144,33 @@ function SolarSystemPlanet({
   const geoQuality = usePerformanceStore((s) => s.settings().geoQuality);
   const sphereSegs = geoSeg(32, geoQuality, 12);
   const ringSegs = geoSeg(64, geoQuality, 24);
+  const anchor = useMemo(
+    () => buildPlanetAnchor(def, plantTop, plantHeight),
+    [def, plantTop, plantHeight]
+  );
+  const minY = plantTop + 1.5 + def.radius;
 
   useThrottledFrame(({ clock }) => {
     if (!grpRef.current || !lightRef.current) return;
-    const t = clock.elapsedTime * def.orbitSpeed + def.orbitPhase;
-    const orbitR = def.orbitRadius + plantHeight * 0.25;
-    const x = Math.cos(t) * orbitR;
-    const z = Math.sin(t) * orbitR - 6 - def.orbitRadius * 0.15;
-    const y = centerY + plantHeight * (0.45 + def.orbitTilt) + Math.sin(t * 0.7 + def.orbitPhase) * 2.5;
+    const t = clock.elapsedTime;
+    const driftT = t * anchor.driftSpeed + anchor.driftPhase;
+    const x =
+      anchor.baseX +
+      Math.cos(driftT) * anchor.driftR +
+      Math.sin(t * anchor.wobbleFreq) * 0.8;
+    const z =
+      anchor.baseZ +
+      Math.sin(driftT * 0.92) * anchor.driftR * 0.88 +
+      Math.cos(t * anchor.wobbleFreq * 0.7) * 0.6;
+    const y = Math.max(
+      minY,
+      anchor.baseY + Math.sin(t * anchor.wobbleFreq + anchor.driftPhase) * anchor.wobbleAmp
+    );
     grpRef.current.position.set(x, y, z);
     grpRef.current.scale.setScalar(scaleIn);
 
-    const proximity = 1 - Math.min(1, Math.abs(x) / orbitR);
+    const dist = Math.sqrt(x * x + z * z);
+    const proximity = 1 - Math.min(1, dist / (anchor.driftR + 18));
     lightRef.current.intensity = def.lightIntensity * (0.3 + proximity * 0.7);
     lightRef.current.position.set(x, y, z);
 
@@ -227,8 +279,8 @@ function SolarSystemPlanet({
   );
 }
 
-function SolarSystem({ stage, plantHeight, centerY }: {
-  stage: number; plantHeight: number; centerY: number;
+function SolarSystem({ stage, plantHeight, plantTop }: {
+  stage: number; plantHeight: number; plantTop: number;
 }) {
   return (
     <>
@@ -238,7 +290,7 @@ function SolarSystem({ stage, plantHeight, centerY }: {
           def={def}
           stage={stage}
           plantHeight={plantHeight}
-          centerY={centerY}
+          plantTop={plantTop}
         />
       ))}
     </>
@@ -446,12 +498,12 @@ export function HighStageEffects({ stage, growth }: Props) {
   if (stage < 50) return null;
 
   const bounds = getPlantWorldBounds(stage, growth);
-  const colors = STAGE_COLORS[Math.min(stage, 100)] ?? STAGE_COLORS[50]!;
+  const colors = getStageColor(stage);
   const moonCount = Math.min(1 + Math.floor((stage - 50) / 15), 4);
 
   return (
     <group>
-      <SolarSystem stage={stage} plantHeight={bounds.worldHeight} centerY={bounds.centerY} />
+      <SolarSystem stage={stage} plantHeight={bounds.worldHeight} plantTop={bounds.top} />
       <AuroraRibbons stage={stage} plantHeight={bounds.worldHeight} centerY={bounds.centerY} color={colors.accent} />
       {Array.from({ length: moonCount }, (_, i) => (
         <OrbitingMoon key={i} seed={i} plantHeight={bounds.worldHeight} centerY={bounds.centerY} />

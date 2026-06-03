@@ -1,6 +1,5 @@
 # Render.com — backend API + WebSocket (required alongside Netlify frontend)
 # Deploy: connect GitHub repo → New Blueprint → select render.yaml
-# After deploy, copy the service URL into Netlify env vars (NEXT_PUBLIC_API_URL / NEXT_PUBLIC_WS_URL)
 
 services:
   - type: web
@@ -23,6 +22,16 @@ services:
         sync: false
       - key: ADMIN_SECRET
         generateValue: true
+      - key: ADMIN_PANEL_PASSWORD
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_DEV_TLS_RELAXED
+        value: "false"
       - key: DECAY_INTERVAL_MS
         value: 60000
       - key: HYDRATION_LOSS_PER_MINUTE

@@ -1,5 +1,24 @@
 import { API_URL, ADMIN_SECRET } from "./constants";
 import { OrganismState, LeafData, ActivityEntry } from "@/types/organism";
+import { PaymentAction } from "@/lib/payments";
+
+export interface PaymentConfigResponse {
+  enabled: boolean;
+  skipPayments: boolean;
+  currency: string;
+  prices: Record<PaymentAction, number>;
+  maxQuantity?: number;
+  publishableKey: string | null;
+}
+
+export interface FulfillPaymentResult {
+  action: PaymentAction;
+  username: string;
+  quantity?: number;
+  alreadyConsumed?: boolean;
+  state?: OrganismState;
+  entry?: ActivityEntry;
+}
 
 async function fetchJSON<T>(
   path: string,
@@ -14,7 +33,19 @@ async function fetchJSON<T>(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? "Request failed");
+    const raw = err.error;
+    let message = "Request failed";
+    if (typeof raw === "string") {
+      message = raw;
+    } else if (raw?.fieldErrors) {
+      const fields = Object.entries(raw.fieldErrors as Record<string, string[]>)
+        .map(([k, v]) => `${k}: ${v.join(", ")}`)
+        .join("; ");
+      message = fields || message;
+    } else if (raw?.formErrors?.length) {
+      message = raw.formErrors.join("; ");
+    }
+    throw new Error(message);
   }
   const data = await res.json();
   return data.data ?? data;
@@ -41,6 +72,36 @@ export const api = {
 
   getActivity: (limit = 20): Promise<ActivityEntry[]> =>
     fetchJSON(`/api/organism/activity?limit=${limit}`),
+
+  postComment: (username: string, message: string): Promise<ActivityEntry> =>
+    fetchJSON("/api/organism/comment", {
+      method: "POST",
+      body: JSON.stringify({ username, message }),
+    }),
+
+  getPaymentConfig: (): Promise<PaymentConfigResponse> =>
+    fetchJSON("/api/payments/config"),
+
+  createCheckout: (body: {
+    action: PaymentAction;
+    username: string;
+    userSessionId: string;
+    message?: string;
+    quantity?: number;
+  }): Promise<{ clientSecret: string; sessionId: string }> =>
+    fetchJSON("/api/payments/checkout", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  fulfillPayment: (
+    stripeSessionId: string,
+    userSessionId: string
+  ): Promise<FulfillPaymentResult> =>
+    fetchJSON("/api/payments/fulfill", {
+      method: "POST",
+      body: JSON.stringify({ stripeSessionId, userSessionId }),
+    }),
 
   admin: {
     reset: (): Promise<OrganismState> =>

@@ -9,21 +9,24 @@ import { useAudioSystem } from "@/hooks/useAudioSystem";
 import { api } from "@/lib/api";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { StatsPanel } from "@/components/ui/StatsPanel";
-import { WateringButton } from "@/components/ui/WateringButton";
+import { OrganismActionButtons } from "@/components/ui/OrganismActionButtons";
 import { ActivityFeed } from "@/components/ui/ActivityFeed";
+import { MobileBottomDock } from "@/components/ui/MobileBottomDock";
 import { WaterModal } from "@/components/ui/WaterModal";
 import { LeafModal } from "@/components/ui/LeafModal";
 import { AdminPanel } from "@/components/ui/AdminPanel";
-import { SeasonIndicator } from "@/components/ui/SeasonIndicator";
 import { NotificationToast } from "@/components/ui/NotificationToast";
-import { NameLeafButton } from "@/components/ui/NameLeafButton";
+import { MobileTopUtilityBar } from "@/components/ui/MobileTopUtilityBar";
 import { DevPanel } from "@/components/ui/DevPanel";
 import { CameraControls } from "@/components/ui/CameraControls";
 import { AudioToggle } from "@/components/ui/AudioToggle";
 import { TitleSplash } from "@/components/ui/TitleSplash";
+import { PaymentReturnHandler } from "@/components/ui/PaymentReturnHandler";
+import { StripeCheckoutOverlay } from "@/components/ui/StripeCheckoutOverlay";
+import { PaymentCelebrationModal } from "@/components/ui/PaymentCelebrationModal";
+import { SceneTouchHint } from "@/components/ui/SceneTouchHint";
 import { ADMIN_SECRET } from "@/lib/constants";
 
-// R3F Canvas must be client-only and not SSR'd
 const GloobloomScene = dynamic(
   () =>
     import("@/components/three/GloobloomScene").then(
@@ -42,15 +45,12 @@ function GloobloomApp() {
   const { updateMood } = useAudioSystem();
   const state = useOrganismStore((s) => s.state);
 
-  // Initialise socket connection
   useSocket();
 
-  // Check admin access via URL param
   const searchParams = useSearchParams();
   const adminKey = searchParams.get("admin");
   const isAdmin = adminKey === ADMIN_SECRET && ADMIN_SECRET.length > 0;
 
-  // Load initial data from REST API (fallback / SSR-safe bootstrap)
   useEffect(() => {
     async function bootstrap() {
       try {
@@ -63,20 +63,18 @@ function GloobloomApp() {
         setLeaves(leaves);
         activities.forEach(addActivity);
       } catch {
-        // Socket will provide state when connected
+        /* socket bootstrap */
       }
     }
     bootstrap();
   }, []);
 
-  // Keep audio in sync with organism mood
   useEffect(() => {
     if (state) {
       updateMood(state.mood, state.season);
     }
   }, [state?.mood, state?.season]);
 
-  // Keyboard shortcut for admin panel
   useEffect(() => {
     if (!isAdmin) return;
     const handler = (e: KeyboardEvent) => {
@@ -87,29 +85,39 @@ function GloobloomApp() {
   }, [isAdmin, showAdminPanel]);
 
   return (
-    <main className="relative w-screen h-[100dvh] overflow-hidden no-select touch-none">
-      {/* 3D scene - full screen */}
-      <GloobloomScene />
+    <main className="relative w-screen h-[100dvh] overflow-hidden no-select">
+      {/* 3D — own layer so touch gestures reach OrbitControls */}
+      <div className="fixed inset-0 z-0 touch-none">
+        <GloobloomScene />
+      </div>
 
-      {/* UI overlay */}
+      <SceneTouchHint />
+
+      {/* UI overlay — interactive controls only */}
       <div className="absolute inset-0 pointer-events-none z-20">
         <div className="pointer-events-auto">
           <StatsPanel />
-          <SeasonIndicator />
-          <ActivityFeed />
-          <WateringButton />
-          <NameLeafButton />
+        </div>
+
+        <ActivityFeed layout="floating" />
+
+        <div className="pointer-events-auto">
+          <OrganismActionButtons className="hidden sm:flex fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto" />
+
+          <div className="hidden sm:flex fixed right-4 z-30 flex-col items-center gap-3 pointer-events-auto top-[17%]">
+            <AudioToggle />
+            <CameraControls />
+          </div>
+
+          <MobileTopUtilityBar />
           <DevPanel />
-          <CameraControls />
         </div>
       </div>
 
       <TitleSplash show={!isLoading} />
-      <AudioToggle />
 
-      {/* Admin panel toggle */}
       {isAdmin && (
-        <div className="fixed top-4 right-40 z-30">
+        <div className="fixed top-4 right-4 max-sm:top-[max(0.5rem,env(safe-area-inset-top))] max-sm:right-2 z-30 pointer-events-auto">
           <button
             onClick={() => setShowAdminPanel(!showAdminPanel)}
             className="px-3 py-1.5 rounded-lg border border-violet-400/20 bg-black/40 text-violet-300/60 text-[10px] tracking-wider uppercase hover:border-violet-400/40 transition-all backdrop-blur-sm"
@@ -120,11 +128,14 @@ function GloobloomApp() {
       )}
       <AdminPanel />
 
-      {/* Modals — each fully independent */}
+      <PaymentReturnHandler />
+      <StripeCheckoutOverlay />
+      <PaymentCelebrationModal />
       <WaterModal />
       <LeafModal />
       <NotificationToast />
       <LoadingScreen isLoading={isLoading} />
+      <MobileBottomDock />
     </main>
   );
 }

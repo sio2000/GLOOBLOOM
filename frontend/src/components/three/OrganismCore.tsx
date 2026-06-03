@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
-import { STAGE_COLORS } from "@/types/organism";
+import { getStageColor } from "@/types/organism";
+import { clampStage, extendedScaleMultiplier, getVisualStageForSizing } from "@/lib/stageConstants";
 import { getTrunkMetrics } from "@/lib/plantScale";
 import { ORGANISM_VERT, ORGANISM_FRAG } from "./shaders";
 
@@ -16,7 +17,7 @@ interface Props {
 
 function useTargetColors(stage: number) {
   return useMemo(() => {
-    const c = STAGE_COLORS[Math.min(Math.max(stage, 1), 100)] ?? STAGE_COLORS[1]!;
+    const c = getStageColor(stage);
     return {
       core: new THREE.Color(c.core),
       glow: new THREE.Color(c.glow),
@@ -47,7 +48,7 @@ function TrunkLeaf({
     heightPos
   );
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     ref.current.rotation.z = Math.sin(clock.elapsedTime * 0.7 + phase) * 0.12;
   });
@@ -91,14 +92,19 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
   const innerRef = useRef<THREE.Mesh>(null);
   const trunkGrpRef = useRef<THREE.Group>(null);
 
-  const colors = STAGE_COLORS[Math.min(Math.max(stage, 1), 100)] ?? STAGE_COLORS[1]!;
+  const colors = getStageColor(stage);
   const targets = useTargetColors(stage);
   const trunkMetrics = useMemo(
     () => getTrunkMetrics(stage, growth),
     [stage, Math.floor(growth / 5)]
   );
 
-  const crownRadius = 0.22 + stage * 0.004 + growth * 0.0015 + (stage >= 50 ? (stage - 50) * 0.005 : 0);
+  const visualStage = getVisualStageForSizing(stage);
+  const crownRadius =
+    0.22 +
+    visualStage * 0.004 +
+    growth * 0.0015 +
+    (visualStage >= 50 ? (visualStage - 50) * 0.005 : 0);
 
   const crownGeo = useMemo(() => {
     const detail = stage >= 50 ? 5 : stage >= 25 ? 4 : 3;
@@ -111,9 +117,9 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
   );
 
   const trunkSegments = useMemo(() => {
-    const count = stage >= 50
-      ? Math.min(12 + Math.floor((stage - 50) / 4), 22)
-      : Math.min(4 + Math.floor(stage / 6), 12);
+    const count = visualStage >= 50
+      ? Math.min(12 + Math.floor((visualStage - 50) / 4), 22)
+      : Math.min(4 + Math.floor(visualStage / 6), 12);
     return Array.from({ length: count }, (_, i) => {
       const t0 = i / count;
       const t1 = (i + 1) / count;
@@ -136,9 +142,9 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
 
   const trunkLeaves = useMemo(() => {
     if (stage < 2) return [];
-    const count = stage >= 50
-      ? Math.min(24 + Math.floor((stage - 50) / 2), 50)
-      : Math.min(3 + Math.floor(stage / 4) + Math.floor(growth / 12), 24);
+    const count = visualStage >= 50
+      ? Math.min(24 + Math.floor((visualStage - 50) / 2), 50)
+      : Math.min(3 + Math.floor(visualStage / 4) + Math.floor(growth / 12), 24);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       heightPos: 0.08 + Math.random() * 0.88,
@@ -163,7 +169,7 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
   const crownY = trunkMetrics.trunkTopY + crownRadius * 0.35;
   const rootY = trunkMetrics.trunkBaseY - 0.08;
 
-  useFrame((_, delta) => {
+  useAdaptiveFrame((_, delta) => {
     if (matRef.current) {
       const u = matRef.current.uniforms;
       u.uTime.value += delta;
@@ -185,7 +191,7 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
     }
   });
 
-  const barkColor = decay > 35 ? "#3a2810" : "#2a4a12";
+  const barkColor = decay > 35 ? "#4a3820" : "#3d7234";
   const barkEmissive = 0.12 + (hydration / 100) * 0.22;
 
   return (
@@ -193,7 +199,7 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
       {/* Root bulb */}
       <mesh position={[0, rootY, 0]} castShadow receiveShadow>
         <sphereGeometry args={[trunkMetrics.trunkRadiusBottom * 1.8, 10, 10]} />
-        <meshStandardMaterial color="#1a3a0a" emissive="#0e2206" emissiveIntensity={0.08} roughness={0.9} />
+        <meshStandardMaterial color="#2a5524" emissive="#183818" emissiveIntensity={0.08} roughness={0.9} />
       </mesh>
 
       {/* Main trunk — grows tall with stage + growth */}
@@ -204,7 +210,7 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
               <cylinderGeometry args={[seg.rTop, seg.rBottom, seg.segH, 10]} />
               <meshStandardMaterial
                 color={barkColor}
-                emissive="#142808"
+                emissive="#1e4820"
                 emissiveIntensity={barkEmissive}
                 roughness={0.88}
                 metalness={0.02}
@@ -212,7 +218,7 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
             </mesh>
             <mesh position={[0, seg.y + seg.segH * 0.42, 0]}>
               <torusGeometry args={[seg.rBottom * 1.15, 0.006, 6, 16]} />
-              <meshStandardMaterial color="#1e5010" emissive="#0e2806" emissiveIntensity={0.06} roughness={0.9} />
+              <meshStandardMaterial color="#2f7832" emissive="#184820" emissiveIntensity={0.06} roughness={0.9} />
             </mesh>
           </group>
         ))}
@@ -257,7 +263,6 @@ export function OrganismCore({ hydration, growth, decay, stage }: Props) {
       {stage >= 30 && <CrystalSpikes stage={stage} colors={colors} growth={growth} crownY={crownY} />}
       {stage >= 50 && <BioluminescentVeins stage={stage} trunkMetrics={trunkMetrics} colors={colors} />}
       {stage >= 60 && <CosmicRings stage={stage} colors={colors} crownY={crownY} />}
-      {stage >= 75 && <NebulaHalo stage={stage} colors={colors} crownY={crownY} />}
     </group>
   );
 }
@@ -276,7 +281,7 @@ function CrystalSpike({
   const ref = useRef<THREE.Mesh>(null);
   const phase = useMemo(() => Math.random() * Math.PI * 2, []);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     ref.current.scale.y = scale[1] * (Math.sin(clock.elapsedTime * 1.8 + phase) * 0.07 + 1);
     ref.current.rotation.y += 0.003;
@@ -387,40 +392,6 @@ function BioluminescentVeins({
   );
 }
 
-function NebulaHalo({
-  stage,
-  colors,
-  crownY,
-}: {
-  stage: number;
-  colors: { glow: string; accent: string };
-  crownY: number;
-}) {
-  const ref = useRef<THREE.Mesh>(null);
-  const scale = 1.2 + (stage - 75) * 0.04;
-
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    ref.current.rotation.y = clock.elapsedTime * 0.08;
-    ref.current.rotation.x = Math.sin(clock.elapsedTime * 0.12) * 0.15;
-  });
-
-  return (
-    <mesh ref={ref} position={[0, crownY, 0]} scale={scale}>
-      <sphereGeometry args={[1.8, 24, 24]} />
-      <meshStandardMaterial
-        color={colors.glow}
-        emissive={colors.accent}
-        emissiveIntensity={0.2}
-        transparent
-        opacity={0.08}
-        depthWrite={false}
-        side={THREE.BackSide}
-      />
-    </mesh>
-  );
-}
-
 function CosmicRings({
   stage,
   colors,
@@ -435,7 +406,7 @@ function CosmicRings({
   const r3 = useRef<THREE.Mesh>(null);
   const scale = 1.0 + (stage - 60) * 0.015;
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     const t = clock.elapsedTime;
     if (r1.current) {
       r1.current.rotation.z = t * 0.18;

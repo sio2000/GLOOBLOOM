@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { LeafData } from "@/types/organism";
@@ -30,8 +30,8 @@ const TWIG_TEMPLATE = {
   tilt: 0.42,
   thickness: 0.035,
   flowerCount: 4,
-  showCaterpillar: true,
-  showLadybugs: true,
+  showCaterpillar: false,
+  showLadybugs: false,
   showButterflies: true,
 };
 
@@ -71,7 +71,7 @@ function BranchFlower({
 }) {
   const ref = useRef<THREE.Group>(null);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     ref.current.rotation.z = Math.sin(clock.elapsedTime * 0.5 + phase) * 0.05;
   });
@@ -97,7 +97,7 @@ function BranchFlower({
 function BranchCaterpillar({ length, phase }: { length: number; phase: number }) {
   const ref = useRef<THREE.Group>(null);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     const t = clock.elapsedTime;
     ref.current.position.y = length * 0.55 + Math.sin(t * 1.2 + phase) * 0.015;
@@ -124,7 +124,7 @@ function BranchLadybug({ branchLength, seed }: { branchLength: number; seed: num
   const ref = useRef<THREE.Group>(null);
   const phase = seed * 2.1;
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     const t = clock.elapsedTime * 0.9 + phase;
     const r = 0.18 + Math.sin(t * 0.5) * 0.06;
@@ -152,7 +152,7 @@ function BranchButterfly({ branchLength, seed, color }: { branchLength: number; 
   const wR = useRef<THREE.Mesh>(null);
   const phase = seed * 1.5;
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!ref.current) return;
     const t = clock.elapsedTime * 0.7 + phase;
     const flap = Math.sin(clock.elapsedTime * 8 + phase) * 0.55;
@@ -235,7 +235,7 @@ function DecoratedTwig({
   ) * 1.1 + 0.04;
   const tilt = TWIG_TEMPLATE.tilt;
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!grp.current) return;
     const t = clock.elapsedTime;
     grp.current.rotation.z = Math.sin(t * 0.45 + def.angle) * 0.035 * progress;

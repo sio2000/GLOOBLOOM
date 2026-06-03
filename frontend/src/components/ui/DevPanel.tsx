@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useOrganismStore } from "@/store/useOrganismStore";
 import { useSocket } from "@/hooks/useSocket";
 import { api } from "@/lib/api";
+import { ADMIN_SECRET } from "@/lib/constants";
 
 /**
  * DevPanel — floating development utility panel.
@@ -14,7 +15,7 @@ import { api } from "@/lib/api";
  *  • Reset — calls admin reset API, wipes organism back to stage 1
  *  • Fast Water — fires 8 waterings with 80ms gaps so you can watch growth
  */
-export function DevPanel() {
+export function DevPanel({ embedded = false }: { embedded?: boolean }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
@@ -27,13 +28,18 @@ export function DevPanel() {
 
   const handleReset = async () => {
     if (busy) return;
+    if (!ADMIN_SECRET) {
+      addLog("✗ Set NEXT_PUBLIC_ADMIN_SECRET in frontend/.env.local");
+      return;
+    }
     setBusy("reset");
     try {
       const newState = await api.admin.reset();
       setState(newState);
       addLog("✓ Reset complete");
-    } catch {
-      addLog("✗ Reset failed — check ADMIN_SECRET");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Reset failed";
+      addLog(`✗ ${msg}`);
     } finally {
       setBusy(null);
     }
@@ -73,27 +79,51 @@ export function DevPanel() {
     setBusy(null);
   };
 
-  return (
-    <div className="fixed bottom-8 left-4 max-sm:bottom-[max(1.25rem,env(safe-area-inset-bottom))] max-sm:left-2 z-50">
-      {/* Toggle button */}
-      <motion.button
-        onClick={() => setOpen((v) => !v)}
-        className="px-3 py-1.5 rounded-lg border border-amber-400/20 bg-black/50 text-amber-300/50 text-[9px] tracking-widest uppercase hover:border-amber-400/40 hover:text-amber-300/80 transition-all backdrop-blur-sm"
-        whileTap={{ scale: 0.96 }}
-      >
-        ⚙ dev
-      </motion.button>
+  const handleWater300 = async () => {
+    if (busy) return;
+    setBusy("water300");
+    addLog("🌊 Dev watering ×300…");
 
-      {/* Panel */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="absolute bottom-10 left-0 w-52 rounded-2xl border border-amber-400/15 bg-black/75 backdrop-blur-2xl p-4 shadow-2xl"
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ type: "spring", damping: 22, stiffness: 280 }}
-          >
+    for (let i = 0; i < 300; i++) {
+      water("DevTester");
+      await new Promise((r) => setTimeout(r, 45));
+    }
+
+    setIsWatering(true);
+    setTimeout(() => setIsWatering(false), 2500);
+
+    addLog("✓ 300 waterings sent");
+    setBusy(null);
+  };
+
+  const toggleBtn = (
+    <motion.button
+      onClick={() => setOpen((v) => !v)}
+      className={
+        embedded
+          ? "w-full px-2 py-1.5 rounded-lg border border-amber-400/25 bg-black/50 text-amber-300/60 text-[8px] tracking-widest uppercase hover:border-amber-400/45 hover:text-amber-300/85 transition-all backdrop-blur-sm"
+          : "px-3 py-1.5 rounded-lg border border-amber-400/20 bg-black/50 text-amber-300/50 text-[9px] tracking-widest uppercase hover:border-amber-400/40 hover:text-amber-300/80 transition-all backdrop-blur-sm"
+      }
+      whileTap={{ scale: 0.96 }}
+    >
+      ⚙ dev
+    </motion.button>
+  );
+
+  const menu = (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className={
+            embedded
+              ? "absolute top-[calc(100%+0.375rem)] right-0 w-48 rounded-2xl border border-amber-400/15 bg-black/85 backdrop-blur-2xl p-4 shadow-2xl z-50"
+              : "absolute bottom-10 left-0 w-52 rounded-2xl border border-amber-400/15 bg-black/75 backdrop-blur-2xl p-4 shadow-2xl"
+          }
+          initial={{ opacity: 0, y: 8, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.96 }}
+          transition={{ type: "spring", damping: 22, stiffness: 280 }}
+        >
             <div className="flex items-center justify-between mb-3">
               <span className="text-[9px] uppercase tracking-widest text-amber-400/50">
                 Dev Tools
@@ -169,6 +199,26 @@ export function DevPanel() {
                 )}
                 Dev 50 Water
               </motion.button>
+
+              <motion.button
+                onClick={handleWater300}
+                disabled={!!busy}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-violet-500/20 bg-violet-950/20 hover:bg-violet-950/40 hover:border-violet-500/40 text-violet-300/70 text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                whileTap={{ scale: 0.97 }}
+              >
+                {busy === "water300" ? (
+                  <motion.span
+                    animate={{ scale: [1, 1.4, 1] }}
+                    transition={{ duration: 0.4, repeat: Infinity }}
+                    className="text-sm"
+                  >
+                    💧
+                  </motion.span>
+                ) : (
+                  <span className="text-sm">🚀</span>
+                )}
+                Dev 300 Water
+              </motion.button>
             </div>
 
             {/* Log */}
@@ -184,6 +234,21 @@ export function DevPanel() {
           </motion.div>
         )}
       </AnimatePresence>
+  );
+
+  if (embedded) {
+    return (
+      <div className="relative w-full">
+        {toggleBtn}
+        {menu}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-8 left-4 z-50 max-sm:hidden relative">
+      {toggleBtn}
+      {menu}
     </div>
   );
 }

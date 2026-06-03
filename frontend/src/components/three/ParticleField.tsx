@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
 import { SPORE_VERT, SPORE_FRAG } from "./shaders";
-import { STAGE_COLORS } from "@/types/organism";
+import { getStageColor } from "@/types/organism";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { scaledCount } from "@/lib/performance";
 import { useThrottledFrame } from "@/hooks/useThrottledFrame";
@@ -19,7 +19,7 @@ interface Props {
 const BASE_SPORE_COUNT = 250;
 
 export function ParticleField({ stage, hydration, season, growth }: Props) {
-  const colors = STAGE_COLORS[Math.min(stage, 100)] ?? STAGE_COLORS[1];
+  const colors = getStageColor(stage);
   const sporeMultiplier = usePerformanceStore((s) => s.settings().sporeMultiplier);
   const seasonMultiplier = usePerformanceStore((s) => s.settings().seasonParticleMultiplier);
 
@@ -60,7 +60,7 @@ export function ParticleField({ stage, hydration, season, growth }: Props) {
     return geo;
   }, [stage, Math.floor(growth / 18), sporeMultiplier]);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     sporeUniforms.uTime.value = clock.elapsedTime;
     (sporeUniforms.uColor.value as THREE.Color).lerp(new THREE.Color(colors.accent), 0.02);
   });

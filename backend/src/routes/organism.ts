@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { OrganismService } from "../services/OrganismService.js";
+import { isPaymentGateActive } from "../lib/requirePayments.js";
 
 export function createOrganismRouter(organism: OrganismService): Router {
   const router = Router();
@@ -15,6 +16,14 @@ export function createOrganismRouter(organism: OrganismService): Router {
   });
 
   router.post("/water", async (req: Request, res: Response) => {
+    if (isPaymentGateActive()) {
+      res.status(402).json({
+        success: false,
+        error: "Payment required. Use POST /api/payments/checkout",
+      });
+      return;
+    }
+
     const schema = z.object({
       username: z.string().min(1).max(32).default("Anonymous"),
       sessionId: z.string().uuid(),
@@ -35,6 +44,14 @@ export function createOrganismRouter(organism: OrganismService): Router {
   });
 
   router.post("/leaf", async (req: Request, res: Response) => {
+    if (isPaymentGateActive()) {
+      res.status(402).json({
+        success: false,
+        error: "Payment required. Use POST /api/payments/checkout",
+      });
+      return;
+    }
+
     const schema = z.object({
       username: z.string().min(1).max(32),
       sessionId: z.string().uuid(),
@@ -70,6 +87,35 @@ export function createOrganismRouter(organism: OrganismService): Router {
       res.json({ success: true, data: feed });
     } catch (err) {
       res.status(500).json({ success: false, error: "Failed to get activity" });
+    }
+  });
+
+  router.post("/comment", async (req: Request, res: Response) => {
+    if (isPaymentGateActive()) {
+      res.status(402).json({
+        success: false,
+        error: "Payment required. Use POST /api/payments/checkout",
+      });
+      return;
+    }
+
+    const schema = z.object({
+      username: z.string().min(1).max(32).default("Anonymous"),
+      message: z.string().min(1).max(280),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: parsed.error.flatten() });
+      return;
+    }
+
+    try {
+      const entry = await organism.postComment(parsed.data.username, parsed.data.message);
+      res.json({ success: true, data: entry });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to post comment";
+      res.status(400).json({ success: false, error: msg });
     }
   });
 

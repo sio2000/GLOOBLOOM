@@ -29,13 +29,13 @@ export function isTouchDevice(): boolean {
 export function getDeviceViewport(): DeviceViewport {
   if (typeof window === "undefined") {
     return {
-      width: 390,
-      height: 844,
-      aspect: 390 / 844,
-      isPortrait: true,
-      isMobile: true,
-      isPhone: true,
-      isTouch: true,
+      width: 1280,
+      height: 800,
+      aspect: 1280 / 800,
+      isPortrait: false,
+      isMobile: false,
+      isPhone: false,
+      isTouch: false,
     };
   }
 

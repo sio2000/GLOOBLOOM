@@ -6,6 +6,7 @@ import { useOrganismStore } from "@/store/useOrganismStore";
 import { useCameraStore } from "@/store/useCameraStore";
 import { getCameraLimits } from "@/lib/plantScale";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 function ArrowButton({
   label,
@@ -58,6 +59,7 @@ function ArrowButton({
 export function CameraControls() {
   const stage = useOrganismStore((s) => s.state?.ecosystemStage ?? 1);
   const growth = useOrganismStore((s) => s.state?.growth ?? 0);
+  const mounted = useHasMounted();
   const device = useDeviceInfo();
   const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
   const nudgeUp = useCameraStore((s) => s.nudgeUp);
@@ -109,8 +111,12 @@ export function CameraControls() {
     return () => window.removeEventListener("keydown", onKey);
   }, [limits.panRange, limits.panStep, nudgeDown, nudgeUp, resetView]);
 
+  if (!mounted || device.isPhone) {
+    return null;
+  }
+
   return (
-    <div className="fixed right-5 max-sm:right-1 top-1/2 -translate-y-1/2 z-30 pointer-events-auto max-sm:scale-[0.82] max-sm:origin-center">
+    <div className="flex flex-col items-center gap-3 max-sm:gap-2">
       <div
         className="flex flex-col items-center gap-3 max-sm:gap-2 p-3 max-sm:p-2 rounded-3xl max-sm:rounded-2xl
           border border-white/8 bg-black/40 backdrop-blur-2xl

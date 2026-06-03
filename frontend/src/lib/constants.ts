@@ -4,8 +4,12 @@ export const API_URL =
 export const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:4000";
 
+/** Must match backend ADMIN_SECRET (see backend/.env.example). */
+const DEV_ADMIN_SECRET = "gloobloom-admin-secret-change-me";
+
 export const ADMIN_SECRET =
-  process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
+  process.env.NEXT_PUBLIC_ADMIN_SECRET?.trim() ||
+  (process.env.NODE_ENV === "development" ? DEV_ADMIN_SECRET : "");
 
 export const WATERING_COOLDOWN_MS = 3000;
 

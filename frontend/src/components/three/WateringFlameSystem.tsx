@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo, useEffect, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
 import { useOrganismStore } from "@/store/useOrganismStore";
 import { getTrunkWorldYRange } from "@/lib/plantScale";
@@ -43,7 +43,7 @@ function SingleFlame({
   const coreMat = useMemo(() => new THREE.MeshStandardMaterial(), []);
   const glowMat = useMemo(() => new THREE.MeshStandardMaterial({ transparent: true, opacity: 0.35, depthWrite: false }), []);
 
-  useFrame(({ clock }, delta) => {
+  useAdaptiveFrame(({ clock }, delta) => {
     if (doneRef.current || !grpRef.current) return;
 
     progressRef.current = Math.min(1, progressRef.current + delta * flame.speed);

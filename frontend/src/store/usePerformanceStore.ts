@@ -37,6 +37,7 @@ function mobileTune(settings: QualitySettings, isMobile: boolean): QualitySettin
     dustMultiplier: settings.dustMultiplier * 0.8,
     seasonParticleMultiplier: settings.seasonParticleMultiplier * 0.8,
     geoQuality: settings.geoQuality * 0.9,
+    animTimeScale: settings.animTimeScale * 0.92,
   };
 }
 

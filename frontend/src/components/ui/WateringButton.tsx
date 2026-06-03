@@ -3,52 +3,37 @@
 import { useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganismStore } from "@/store/useOrganismStore";
-import { useSocket } from "@/hooks/useSocket";
-import { useAudioSystem } from "@/hooks/useAudioSystem";
-import { WATERING_COOLDOWN_MS } from "@/lib/constants";
+import { usePayments } from "@/hooks/usePayments";
+import { priceFor } from "@/lib/payments";
 
 export function WateringButton() {
-  const { water } = useSocket();
-  const { playWaterChime, resume } = useAudioSystem();
+  const { paymentsRequired, checkoutLoading } = usePayments();
   const username = useOrganismStore((s) => s.username);
   const isWatering = useOrganismStore((s) => s.isWatering);
   const cooldown = useOrganismStore((s) => s.wateringCooldown);
-  const setIsWatering = useOrganismStore((s) => s.setIsWatering);
-  const setCooldown = useOrganismStore((s) => s.setWateringCooldown);
-  // Opens the dedicated water modal (separate from leaf modal)
   const setShowWaterModal = useOrganismStore((s) => s.setShowWaterModal);
 
   const handleWater = useCallback(() => {
-    if (cooldown) return;
-    resume();
+    if (cooldown || checkoutLoading) return;
+    setShowWaterModal(true);
+  }, [cooldown, checkoutLoading, setShowWaterModal]);
 
-    // If no name yet, open the water-specific modal
-    if (!username) {
-      setShowWaterModal(true);
-      return;
-    }
-
-    // Name already known — water directly
-    setIsWatering(true);
-    setCooldown(true);
-    playWaterChime();
-    water(username);
-
-    setTimeout(() => setIsWatering(false), 1200);
-    setTimeout(() => setCooldown(false), WATERING_COOLDOWN_MS);
-  }, [cooldown, username, water, playWaterChime, resume, setIsWatering, setCooldown, setShowWaterModal]);
+  const label = cooldown
+    ? "cooldown…"
+    : paymentsRequired
+      ? priceFor("water")
+      : "water";
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 max-sm:bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-30 flex flex-col items-center gap-3 max-sm:gap-2">
-      {/* Main water button */}
+    <div className="flex flex-col items-center gap-3 max-sm:gap-2">
       <motion.button
         onClick={handleWater}
-        disabled={cooldown}
+        disabled={cooldown || checkoutLoading}
         className="relative group"
         whileHover={{ scale: cooldown ? 1 : 1.06 }}
         whileTap={{ scale: cooldown ? 1 : 0.94 }}
+        aria-label="Water the organism"
       >
-        {/* Ripple rings while watering */}
         <AnimatePresence>
           {isWatering &&
             [0, 1, 2].map((i) => (
@@ -63,7 +48,6 @@ export function WateringButton() {
             ))}
         </AnimatePresence>
 
-        {/* Outer glow ring */}
         <motion.div
           className="absolute -inset-3 rounded-full"
           animate={{
@@ -75,7 +59,6 @@ export function WateringButton() {
           transition={{ duration: 2.5, repeat: Infinity }}
         />
 
-        {/* Button core */}
         <div
           className={`
             relative w-20 h-20 max-sm:w-[4.25rem] max-sm:h-[4.25rem] rounded-full flex items-center justify-center
@@ -102,14 +85,14 @@ export function WateringButton() {
         </div>
       </motion.button>
 
-      {/* Label */}
-      <motion.div
-        className="text-center"
-        animate={{ opacity: cooldown ? 0.4 : 0.8 }}
-      >
-        <p className="text-[10px] uppercase tracking-widest text-cyan-400/60">
-          {cooldown ? "growing…" : "water"}
-        </p>
+      <motion.div className="text-center" animate={{ opacity: cooldown ? 0.4 : 0.8 }}>
+        <p className="text-[10px] uppercase tracking-widest text-cyan-400/60">{label}</p>
+        {paymentsRequired && !cooldown && (
+          <p className="text-[8px] text-white/25 mt-0.5">per watering</p>
+        )}
+        {!paymentsRequired && !cooldown && username && (
+          <p className="text-[8px] text-white/25 mt-0.5">tap to choose amount</p>
+        )}
       </motion.div>
     </div>
   );

@@ -79,3 +79,21 @@ model ActivityLog {
 
   @@map("activity_logs")
 }
+
+model Payment {
+  id              String    @id @default(uuid())
+  stripeSessionId String    @unique
+  action          String    // water | leaf | comment
+  quantity        Int       @default(1)
+  amountCents     Int
+  currency        String    @default("eur")
+  status          String    @default("pending") // pending | paid | consumed | expired
+  userSessionId   String
+  username        String
+  message         String?
+  createdAt       DateTime  @default(now())
+  paidAt          DateTime?
+  consumedAt      DateTime?
+
+  @@map("payments")
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
 import { getTrunkMetrics } from "@/lib/plantScale";
 
@@ -69,7 +69,7 @@ function Flower({
   const stamenColor = useMemo(() => new THREE.Color(palette.stamen), [palette.stamen]);
   const emissiveIntensity = 0.22 + (hydration / 100) * 0.28;
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!grp.current || !headRef.current) return;
     const t = clock.elapsedTime;
     grp.current.position.y = pos[1] + Math.sin(t * 0.7 + phase) * 0.015 * scale;
@@ -178,17 +178,26 @@ export function FlowerSystem({ stage, hydration, growth }: Props) {
   const flowers = useMemo(() => {
     if (stage < 3) return [];
     const count = stage >= 50
-      ? Math.min(28 + Math.floor((stage - 50) * 0.7), 55)
-      : Math.min(4 + (stage - 2) * 3, 28);
+      ? Math.min(20 + Math.floor((stage - 50) * 0.45), 38)
+      : Math.min(4 + (stage - 2) * 2, 20);
     const trunk = getTrunkMetrics(stage, growth);
+    const items: Array<{
+      id: number;
+      pos: [number, number, number];
+      scale: number;
+      petalCnt: number;
+      phase: number;
+      palette: (typeof FLOWER_PALETTE)[number];
+      outward: THREE.Vector3;
+    }> = [];
 
-    return Array.from({ length: count }, (_, i) => {
+    for (let i = 0; i < count; i++) {
       const onTrunk = i % 3 === 0;
       const palette = FLOWER_PALETTE[i % FLOWER_PALETTE.length]!;
 
       if (onTrunk) {
-        const heightPos = 0.15 + Math.random() * 0.78;
-        const angle = Math.random() * Math.PI * 2;
+        const heightPos = 0.15 + ((i * 17) % 100) / 100 * 0.78;
+        const angle = ((i * 31) % 100) / 100 * Math.PI * 2;
         const trunkRadius = THREE.MathUtils.lerp(
           trunk.trunkRadiusBottom,
           trunk.trunkRadiusTop,
@@ -198,40 +207,36 @@ export function FlowerSystem({ stage, hydration, growth }: Props) {
         const y = trunk.trunkBaseY + heightPos * trunk.trunkHeight;
         const outward = new THREE.Vector3(Math.cos(angle), 0.05, Math.sin(angle)).normalize();
 
-        return {
+        items.push({
           id: i,
-          pos: [Math.cos(angle) * surfaceRadius, y, Math.sin(angle) * surfaceRadius] as [
-            number,
-            number,
-            number,
-          ],
-          scale: 0.7 + Math.random() * 0.35 + stage * 0.015,
+          pos: [Math.cos(angle) * surfaceRadius, y, Math.sin(angle) * surfaceRadius],
+          scale: 0.7 + ((i * 13) % 100) / 100 * 0.35 + stage * 0.015,
           petalCnt: 6 + (i % 3),
-          phase: Math.random() * Math.PI * 2,
+          phase: ((i * 23) % 100) / 100 * Math.PI * 2,
           palette,
           outward,
-        };
+        });
+        continue;
       }
 
       const angle = (i / count) * Math.PI * 2 + i * 0.35;
-      const radius = 0.55 + Math.random() * 0.7 + (stage - 3) * 0.12;
-      const height = trunk.trunkBaseY + trunk.trunkHeight * (0.45 + Math.random() * 0.55);
+      const radius = 0.55 + ((i * 19) % 100) / 100 * 0.7 + (stage - 3) * 0.12;
+      const height =
+        trunk.trunkBaseY + trunk.trunkHeight * (0.45 + ((i * 41) % 100) / 100 * 0.55);
       const outward = new THREE.Vector3(Math.cos(angle), 0.12, Math.sin(angle)).normalize();
 
-      return {
+      items.push({
         id: i,
-        pos: [Math.cos(angle) * radius, height, Math.sin(angle) * radius] as [
-          number,
-          number,
-          number,
-        ],
-        scale: 0.75 + Math.random() * 0.5 + stage * 0.02,
+        pos: [Math.cos(angle) * radius, height, Math.sin(angle) * radius],
+        scale: 0.75 + ((i * 29) % 100) / 100 * 0.5 + stage * 0.02,
         petalCnt: 6 + (i % 4),
-        phase: Math.random() * Math.PI * 2,
+        phase: ((i * 37) % 100) / 100 * Math.PI * 2,
         palette,
         outward,
-      };
-    });
+      });
+    }
+
+    return items;
   }, [stage, Math.floor(growth / 15)]);
 
   if (stage < 3) return null;

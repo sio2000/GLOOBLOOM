@@ -10,6 +10,21 @@ import {
   RareEvent,
   WateringEffect,
 } from "@/types/organism";
+import { PaymentAction } from "@/lib/payments";
+
+export interface StripeCheckoutState {
+  clientSecret: string;
+  sessionId: string;
+  action: PaymentAction;
+  quantity: number;
+  publishableKey: string;
+}
+
+export interface PaymentCelebrationState {
+  action: PaymentAction;
+  username?: string;
+  quantity?: number;
+}
 
 interface WateringParticle {
   id: string;
@@ -31,6 +46,7 @@ interface OrganismStore {
   showUsernameModal: boolean;
   showWaterModal: boolean;
   showLeafModal: boolean;
+  showLoreSheet: boolean;
   showAdminPanel: boolean;
   pendingWateringEffects: WateringParticle[];
   activeCreatures: { id: string; type: string; spawnedAt: number }[];
@@ -38,6 +54,8 @@ interface OrganismStore {
   pendingMutation: MutationEvent | null;
   pendingRareEvent: RareEvent | null;
   showNotification: { message: string; type: string } | null;
+  stripeCheckout: StripeCheckoutState | null;
+  paymentCelebration: PaymentCelebrationState | null;
 
   setState: (state: OrganismState) => void;
   addActivity: (entry: ActivityEntry) => void;
@@ -49,6 +67,7 @@ interface OrganismStore {
   setShowUsernameModal: (v: boolean) => void;
   setShowWaterModal: (v: boolean) => void;
   setShowLeafModal: (v: boolean) => void;
+  setShowLoreSheet: (v: boolean) => void;
   setShowAdminPanel: (v: boolean) => void;
   setLeaves: (leaves: LeafData[]) => void;
   addWateringEffect: (effect: WateringParticle) => void;
@@ -60,6 +79,9 @@ interface OrganismStore {
   setPendingRareEvent: (event: RareEvent | null) => void;
   showNotif: (message: string, type?: string) => void;
   clearNotif: () => void;
+  setStripeCheckout: (checkout: StripeCheckoutState | null) => void;
+  setPaymentCelebration: (celebration: PaymentCelebrationState | null) => void;
+  clearPaymentCelebration: () => void;
 }
 
 export const useOrganismStore = create<OrganismStore>()(
@@ -75,6 +97,7 @@ export const useOrganismStore = create<OrganismStore>()(
     showUsernameModal: false,
     showWaterModal: false,
     showLeafModal: false,
+    showLoreSheet: false,
     showAdminPanel: false,
     pendingWateringEffects: [],
     activeCreatures: [],
@@ -82,6 +105,8 @@ export const useOrganismStore = create<OrganismStore>()(
     pendingMutation: null,
     pendingRareEvent: null,
     showNotification: null,
+    stripeCheckout: null,
+    paymentCelebration: null,
 
     setState: (state) => set({ state, isLoading: false }),
 
@@ -98,6 +123,7 @@ export const useOrganismStore = create<OrganismStore>()(
     setShowUsernameModal: (v) => set({ showUsernameModal: v }),
     setShowWaterModal: (v) => set({ showWaterModal: v }),
     setShowLeafModal: (v) => set({ showLeafModal: v }),
+    setShowLoreSheet: (v) => set({ showLoreSheet: v }),
     setShowAdminPanel: (v) => set({ showAdminPanel: v }),
     setLeaves: (leaves) => set({ leaves }),
 
@@ -132,5 +158,9 @@ export const useOrganismStore = create<OrganismStore>()(
       set({ showNotification: { message, type } }),
 
     clearNotif: () => set({ showNotification: null }),
+
+    setStripeCheckout: (checkout) => set({ stripeCheckout: checkout }),
+    setPaymentCelebration: (celebration) => set({ paymentCelebration: celebration }),
+    clearPaymentCelebration: () => set({ paymentCelebration: null }),
   }))
 );

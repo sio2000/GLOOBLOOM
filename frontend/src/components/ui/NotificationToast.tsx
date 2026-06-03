@@ -45,7 +45,7 @@ export function NotificationToast() {
   const styles = TYPE_STYLES[notif?.type ?? "info"] ?? TYPE_STYLES.info;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+    <div className="fixed top-4 max-sm:top-[max(0.75rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[90] pointer-events-none px-4 w-full max-w-sm flex justify-center">
       <AnimatePresence mode="popLayout">
         {notif && (
           <motion.div

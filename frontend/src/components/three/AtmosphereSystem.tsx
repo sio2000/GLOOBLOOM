@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
-import { STAGE_COLORS } from "@/types/organism";
+import { getStageColor } from "@/types/organism";
 import { Season } from "@/types/organism";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function AtmosphereSystem({ stage, season, hydration, decay }: Props) {
-  const colors = STAGE_COLORS[Math.min(stage, 100)] ?? STAGE_COLORS[1];
+  const colors = getStageColor(stage);
 
   return (
     <group>
@@ -45,7 +45,7 @@ function GroundPlane({
   const baseColor = new THREE.Color(colors.core).multiplyScalar(0.35);
   const emissiveColor = new THREE.Color(colors.glow).multiplyScalar(0.06);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     if (!matRef.current) return;
     const t = clock.elapsedTime;
     const pulse = Math.sin(t * 0.8) * 0.03 + 0.06;
@@ -85,9 +85,9 @@ function VolumeFog({ season, stage }: { season: Season; stage: number }) {
   const fogColor = new THREE.Color(fogColors[season] ?? "#1a2a1a");
   const fogOpacity = 0.1;
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame((_, delta) => {
     if (!ref.current) return;
-    ref.current.rotation.y += 0.0008;
+    ref.current.rotation.y += delta * 0.05;
   });
 
   return (
@@ -116,10 +116,10 @@ function CosmicRing({
   const tubeSegs = geoSeg(80, geoQuality, 32);
   const radialSegs = geoSeg(12, geoQuality, 6);
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }, delta) => {
     if (!ref.current) return;
     ref.current.rotation.x = Math.PI / 2 + Math.sin(clock.elapsedTime * 0.2) * 0.08;
-    ref.current.rotation.z += 0.001;
+    ref.current.rotation.z += delta * 0.06;
   });
 
   if (stage < 4) return null;
@@ -155,11 +155,11 @@ function FloatingIsland({
 }) {
   const ref = useRef<THREE.Group>(null);
 
-  useThrottledFrame(({ clock }) => {
+  useThrottledFrame(({ clock }, delta) => {
     if (!ref.current) return;
     const t = clock.elapsedTime;
     ref.current.position.y = pos.y + Math.sin(t * 0.4 + phase) * 0.15;
-    ref.current.rotation.y += 0.003;
+    ref.current.rotation.y += delta * 0.18;
   });
 
   return (

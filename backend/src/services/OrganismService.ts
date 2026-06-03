@@ -14,8 +14,15 @@ function parseMeta(metadata: string | null): Record<string, unknown> | undefined
   catch { return undefined; }
 }
 
-// 100 stages — each requires ~5 waterings (6 growth per stage, 1.25 growth per watering)
-// calcStage formula: Math.floor(growth / 6) + 1, capped at 100
+// 400 stages — each requires ~5 waterings (6 growth per stage, 1.25 growth per watering)
+// calcStage formula: Math.floor(growth / 6) + 1, capped at 400
+import { calcEcosystemStage } from "../constants/stages.js";
+import {
+  LIFE_CRITICAL_THRESHOLD,
+  LIFE_LOW_THRESHOLD,
+  decayGainForInterval,
+  hydrationLossForInterval,
+} from "../constants/vitality.js";
 
 const MICRO_EVOLUTIONS = [
   "A new tendril slowly uncurled between the branches",
@@ -101,7 +108,7 @@ export class OrganismService {
     const prevStage = this.calcStage(organism.growth);
 
     const newHydration = Math.min(100, organism.hydration + hydrationGain * 2);
-    const newGrowth    = organism.growth + hydrationGain * 0.5;   // NO cap — cumulative up to stage 100
+    const newGrowth    = organism.growth + hydrationGain * 0.5;   // NO cap — cumulative up to stage 400
     const newDecay     = Math.max(0,   organism.decay - 2);
     const newBeauty    = Math.min(100, organism.beautyLevel + hydrationGain * 0.3);
     const newBio       = Math.min(100, organism.biodiversity + hydrationGain * 0.2);
@@ -228,6 +235,16 @@ export class OrganismService {
     });
   }
 
+  async postComment(username: string, message: string): Promise<ActivityEntry> {
+    const cleanUser = username.trim().slice(0, 32) || "Anonymous";
+    const cleanMsg = message.trim().slice(0, 280);
+    if (!cleanMsg) throw new Error("Comment cannot be empty");
+
+    await this.logActivity("comment", cleanMsg, cleanUser);
+    const feed = await this.getActivityFeed(1);
+    return feed[0]!;
+  }
+
   async getActivityFeed(limit = 20): Promise<ActivityEntry[]> {
     const logs = await this.prisma.activityLog.findMany({
       orderBy: { createdAt: "desc" },
@@ -311,31 +328,74 @@ export class OrganismService {
     this.broadcast("rare_event", event);
   }
 
+  private async handleOrganismDeath(organismId: string) {
+    const updated = await this.prisma.organism.update({
+      where: { id: organismId },
+      data: {
+        hydration: 42,
+        decay: 0,
+        mood: "thirsty",
+        lastWatered: new Date(),
+      },
+    });
+    await this.logActivity(
+      "milestone",
+      "The Gloobloom has died. After ten years at the brink, silence fell — a new seed stirs in the ashes."
+    );
+    const fullState = await this.toFullState(updated);
+    this.broadcast("organism_state", fullState);
+  }
+
   private startDecayLoop() {
     if (this.decayInterval) clearInterval(this.decayInterval);
-    const intervalMs   = parseInt(process.env.DECAY_INTERVAL_MS ?? "60000");
-    const lossPerTick  = parseFloat(process.env.HYDRATION_LOSS_PER_MINUTE ?? "0.5") * (intervalMs / 60000);
+    const intervalMs = parseInt(process.env.DECAY_INTERVAL_MS ?? "60000");
 
     this.decayInterval = setInterval(async () => {
       const organism = await this.prisma.organism.findFirst();
       if (!organism) return;
 
+      const prevWater = organism.hydration;
+      if (prevWater <= 0) return;
+
       const minutesSince = (Date.now() - new Date(organism.lastWatered).getTime()) / 60000;
-      const decayInc = minutesSince > 20 ? 0.4 : 0;
-      const newHydration = Math.max(0, organism.hydration - lossPerTick);
-      const newDecay     = Math.min(100, organism.decay + (newHydration < 20 ? decayInc + 0.6 : decayInc));
-      const newMood      = this.calcMood(newHydration, newDecay, organism.growth);
+      const loss = hydrationLossForInterval(prevWater, intervalMs);
+      let newHydration = Math.max(0, prevWater - loss);
+      const decayInc = decayGainForInterval(prevWater, intervalMs, minutesSince);
+      let newDecay = Math.min(100, organism.decay + decayInc);
+      let newMood = this.calcMood(newHydration, newDecay, organism.growth);
+
+      if (newHydration <= 0) {
+        await this.handleOrganismDeath(organism.id);
+        return;
+      }
 
       await this.prisma.organism.update({
         where: { id: organism.id },
         data: { hydration: newHydration, decay: newDecay, mood: newMood },
       });
 
-      if (newDecay > 30 && organism.decay <= 30) {
+      if (prevWater > LIFE_LOW_THRESHOLD && newHydration <= LIFE_LOW_THRESHOLD) {
+        await this.logActivity(
+          "decay",
+          "Water has fallen below 30%. The long twilight begins — one week until the brink."
+        );
+      }
+      if (prevWater > LIFE_CRITICAL_THRESHOLD && newHydration <= LIFE_CRITICAL_THRESHOLD) {
+        await this.logActivity(
+          "decay",
+          "Only 5% water remains. The organism clings on — ten years stand between now and silence."
+        );
+      }
+      if (newDecay > 30 && organism.decay <= 30 && newHydration > LIFE_LOW_THRESHOLD) {
         await this.logActivity("decay", "The organism begins to wither. Leaves curl inward. The light dims.");
       }
 
-      const fullState = await this.toFullState({ ...organism, hydration: newHydration, decay: newDecay, mood: newMood });
+      const fullState = await this.toFullState({
+        ...organism,
+        hydration: newHydration,
+        decay: newDecay,
+        mood: newMood,
+      });
       this.broadcast("organism_state", fullState);
     }, intervalMs);
   }
@@ -413,8 +473,7 @@ export class OrganismService {
   }
 
   private calcStage(growth: number): number {
-    // 6 growth points per stage, ~5 waterings each (at 1.25 growth/watering)
-    return Math.min(Math.max(Math.floor(growth / 6) + 1, 1), 100);
+    return calcEcosystemStage(growth);
   }
 
   private calcMood(hydration: number, decay: number, growth: number): OrganismMood {
@@ -422,6 +481,8 @@ export class OrganismService {
     if (stage >= 80 && hydration > 70) return "transcendent";
     if (hydration > 75 && decay < 10)  return "thriving";
     if (hydration > 50 && decay < 25)  return "content";
+    if (hydration <= LIFE_CRITICAL_THRESHOLD) return "critical";
+    if (hydration <= LIFE_LOW_THRESHOLD)      return "decaying";
     if (hydration < 25 && decay < 30)  return "thirsty";
     if (decay > 60)                    return "critical";
     if (decay > 30)                    return "decaying";

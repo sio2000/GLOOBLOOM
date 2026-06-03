@@ -2,6 +2,7 @@
 
 import { Suspense, useRef, useMemo, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import {
   OrbitControls,
   Stars,
@@ -12,7 +13,6 @@ import {
 import {
   EffectComposer,
   Bloom,
-  Vignette,
 } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
@@ -26,13 +26,18 @@ import { AtmosphereSystem } from "./AtmosphereSystem";
 import { LeafSystem } from "./LeafSystem";
 import { WateringFlameSystem } from "./WateringFlameSystem";
 import { MajorBranchSystem } from "./MajorBranchSystem";
+import { GiantTrunkBranchSystem } from "./GiantTrunkBranchSystem";
 import { CrownBouquet } from "./CrownBouquet";
 import { GiantFlyingInsects } from "./GiantFlyingInsects";
 import { HighStageEffects } from "./HighStageEffects";
+import { RootMushroomSystem } from "./RootMushroomSystem";
+import { RootFeatherSystem } from "./RootFeatherSystem";
 import { useOrganismStore } from "@/store/useOrganismStore";
 import { useCameraStore } from "@/store/useCameraStore";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
-import { STAGE_COLORS, Season } from "@/types/organism";
+import { ExtendedStageSystems } from "./ExtendedStageSystems";
+import { getStageColor, Season } from "@/types/organism";
+import { MAX_ECOSYSTEM_STAGE } from "@/lib/stageConstants";
 import { getScales, getCameraLimits } from "@/lib/plantScale";
 import { scaledCount } from "@/lib/performance";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
@@ -45,7 +50,7 @@ function SceneLighting({ stage, season, hydration, castShadow, shadowMapSize }: 
   const mainLightRef = useRef<THREE.PointLight>(null);
   const rimLightRef  = useRef<THREE.PointLight>(null);
   const fillLightRef = useRef<THREE.PointLight>(null);
-  const colors = STAGE_COLORS[Math.min(stage, 100)] ?? STAGE_COLORS[1]!;
+  const colors = getStageColor(stage);
 
   const seasonAmbient: Record<Season, string> = {
     bloom:        "#162616",
@@ -54,7 +59,7 @@ function SceneLighting({ stage, season, hydration, castShadow, shadowMapSize }: 
     neon_rain:    "#0e0618",
   };
 
-  useFrame(({ clock }) => {
+  useAdaptiveFrame(({ clock }) => {
     const t = clock.elapsedTime;
     if (ambientRef.current)   ambientRef.current.intensity = 0.28 + stage * 0.002;
     if (mainLightRef.current) {
@@ -82,7 +87,7 @@ function SceneLighting({ stage, season, hydration, castShadow, shadowMapSize }: 
 
 function PostProcessing({ stage, enabled, multisampling }: { stage: number; enabled: boolean; multisampling: number }) {
   if (!enabled) return null;
-  const bloomIntensity = 0.025 + Math.min(stage, 100) * 0.0015;
+  const bloomIntensity = 0.025 + Math.min(stage, MAX_ECOSYSTEM_STAGE) * 0.0015;
 
   return (
     <EffectComposer multisampling={multisampling}>
@@ -93,7 +98,6 @@ function PostProcessing({ stage, enabled, multisampling }: { stage: number; enab
         radius={0.28}
         blendFunction={BlendFunction.ADD}
       />
-      <Vignette offset={0.35} darkness={0.55} blendFunction={BlendFunction.NORMAL} />
     </EffectComposer>
   );
 }
@@ -138,11 +142,12 @@ function CameraRig({
       maxDistance={limits.maxDistance}
       maxPolarAngle={Math.PI * 0.92}
       minPolarAngle={Math.PI * 0.02}
-      rotateSpeed={isMobile ? 0.55 : 0.45}
-      zoomSpeed={isMobile ? 0.85 : 1.5}
+      rotateSpeed={isMobile ? 0.65 : 0.45}
+      zoomSpeed={isMobile ? 1.1 : 1.5}
       panSpeed={isMobile ? 0.4 : 0.65}
-      autoRotate
-      autoRotateSpeed={isMobile ? 0.08 : 0.12}
+      enableRotate
+      autoRotate={!isMobile}
+      autoRotateSpeed={isMobile ? 0.06 : 0.12}
       makeDefault
     />
   );
@@ -173,7 +178,6 @@ function CameraSetup({
 function PerformanceController() {
   const init = usePerformanceStore((s) => s.init);
   const degrade = usePerformanceStore((s) => s.degrade);
-  const improve = usePerformanceStore((s) => s.improve);
   const device = useDeviceInfo();
 
   useEffect(() => { init(); }, [init]);
@@ -182,7 +186,6 @@ function PerformanceController() {
     <PerformanceMonitor
       flipflops={device.isMobile ? 2 : 4}
       onDecline={degrade}
-      onIncline={improve}
     />
   );
 }
@@ -196,7 +199,7 @@ function SceneContent() {
 
   if (!state) return null;
 
-  const { hydration, growth, decay, ecosystemStage: stage, season } = state;
+  const { hydration, growth, decay, ecosystemStage: stage, season, totalWaterings } = state;
   const { widthScale, heightScale } = getScales(stage);
   const cameraLimits = getCameraLimits(stage, growth, {
     isMobile: device.isMobile,
@@ -229,13 +232,28 @@ function SceneContent() {
 
       <AtmosphereSystem stage={stage} season={season} hydration={hydration} decay={decay} />
 
+      <RootMushroomSystem
+        stage={stage}
+        growth={growth}
+        totalWaterings={totalWaterings}
+        hydration={hydration}
+      />
+      <RootFeatherSystem
+        stage={stage}
+        growth={growth}
+        totalWaterings={totalWaterings}
+        hydration={hydration}
+      />
+
       <group position={[0, -0.3, 0]} scale={[widthScale, heightScale, widthScale]}>
         <OrganismCore hydration={hydration} growth={growth} decay={decay} stage={stage} />
         <BranchSystem stage={stage} growth={growth} hydration={hydration} decay={decay} />
         <FlowerSystem stage={stage} hydration={hydration} growth={growth} />
         <LeafSystem leaves={leaves} stage={stage} growth={growth} />
         <MajorBranchSystem stage={stage} growth={growth} hydration={hydration} leaves={leaves} />
+        <GiantTrunkBranchSystem stage={stage} growth={growth} hydration={hydration} />
         <CrownBouquet stage={stage} hydration={hydration} growth={growth} />
+        <ExtendedStageSystems stage={stage} growth={growth} hydration={hydration} />
       </group>
 
       <WateringFlameSystem stage={stage} growth={growth} />
@@ -262,7 +280,7 @@ export function GloobloomScene() {
   const perf = usePerformanceStore((s) => s.settings());
   const initPerf = usePerformanceStore((s) => s.init);
   const device = useDeviceInfo();
-  const fogColor = (STAGE_COLORS[Math.min(stage, 100)] ?? STAGE_COLORS[1]!).fog;
+  const fogColor = getStageColor(stage ?? 1).fog;
   const cameraLimits = getCameraLimits(stage, growth, {
     isMobile: device.isMobile,
     isPortrait: device.isPortrait,

@@ -1,22 +1,27 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { useThrottledFrame } from "@/hooks/useThrottledFrame";
+import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import * as THREE from "three";
 import { getPlantWorldBounds } from "@/lib/plantScale";
+import {
+  createFlightProfile,
+  sampleFlight,
+  type FlyPath,
+} from "@/lib/insectFlight";
 
 interface Props {
   stage: number;
   growth: number;
 }
 
-type FlyPath = "orbit" | "figure8" | "vertical" | "ellipse" | "wave";
-
 interface InsectFlyProps {
   seed: number;
   scale: number;
   plantHeight: number;
   centerY: number;
+  stage: number;
+  growth: number;
   path?: FlyPath;
 }
 
@@ -31,95 +36,46 @@ function useFlyMotion(
   plantHeight: number,
   centerY: number,
   speed = 0.35,
-  path: FlyPath = "orbit"
+  path: FlyPath = "wander",
+  stage: number,
+  growth: number
 ) {
-  const phase = seed * 2.17;
-  const r = 1.8 + (seed % 4) * 0.6 + plantHeight * 0.08;
-  const maxH = plantHeight * (0.35 + (seed % 3) * 0.1);
-  const dir = seed % 2 === 0 ? 1 : -1;
+  const profile = useMemo(
+    () => createFlightProfile(seed, plantHeight, centerY, speed, path, 1, stage, growth),
+    [seed, plantHeight, centerY, speed, path, stage, growth]
+  );
 
-  return (clock: THREE.Clock) => {
-    const t = clock.elapsedTime * (speed + seed * 0.04) * dir + phase;
-    let pos: THREE.Vector3;
-
-    switch (path) {
-      case "figure8":
-        pos = new THREE.Vector3(
-          Math.sin(t * 0.55) * r * 1.1,
-          centerY + 0.8 + Math.sin(t * 1.1) * maxH * 0.7 + Math.cos(t * 0.35) * 0.4,
-          Math.sin(t * 1.1) * r * 0.55 + Math.cos(t * 0.55) * 0.5
-        );
-        break;
-      case "vertical":
-        pos = new THREE.Vector3(
-          Math.cos(seed * 0.9) * r * 0.45,
-          centerY + 0.5 + ((Math.sin(t * 0.48) + 1) * 0.5) * maxH * 1.35,
-          Math.sin(seed * 0.9) * r * 0.45 + Math.sin(t * 0.3) * 0.6
-        );
-        break;
-      case "ellipse":
-        pos = new THREE.Vector3(
-          Math.cos(t * 0.5) * r * 1.35,
-          centerY + 0.7 + Math.sin(t * 0.9) * maxH * 0.45,
-          Math.sin(t * 0.5) * r * 0.65 + Math.cos(t * 1.4) * 0.35
-        );
-        break;
-      case "wave":
-        pos = new THREE.Vector3(
-          Math.cos(t * 0.72) * r + Math.sin(t * 2.4) * 0.55,
-          centerY + 0.65 + Math.abs(Math.sin(t * 0.55)) * maxH * 0.85,
-          Math.sin(t * 0.72) * r * 0.9 - 1.2 + Math.cos(t * 1.9) * 0.4
-        );
-        break;
-      default:
-        pos = new THREE.Vector3(
-          Math.cos(t * 0.65) * r + Math.sin(t * 1.8) * 0.4,
-          centerY + 0.6 + Math.abs(Math.sin(t * 0.42)) * maxH + Math.sin(t * 2.1) * 0.15,
-          Math.sin(t * 0.65) * r + Math.cos(t * 1.5) * 0.3
-        );
-    }
-
-    const lookAhead = t + 0.12 * dir;
-    const ahead =
-      path === "figure8"
-        ? new THREE.Vector3(Math.sin(lookAhead * 0.55) * r * 1.1, pos.y, Math.sin(lookAhead * 1.1) * r * 0.55)
-        : path === "vertical"
-          ? new THREE.Vector3(pos.x, centerY + 0.5 + ((Math.sin(lookAhead * 0.48) + 1) * 0.5) * maxH * 1.35, pos.z)
-          : path === "ellipse"
-            ? new THREE.Vector3(Math.cos(lookAhead * 0.5) * r * 1.35, pos.y, Math.sin(lookAhead * 0.5) * r * 0.65)
-            : path === "wave"
-              ? new THREE.Vector3(Math.cos(lookAhead * 0.72) * r, pos.y, Math.sin(lookAhead * 0.72) * r * 0.9 - 1.2)
-              : new THREE.Vector3(Math.cos(lookAhead * 0.65) * r, pos.y, Math.sin(lookAhead * 0.65) * r);
-
-    const yaw = Math.atan2(ahead.x - pos.x, ahead.z - pos.z);
-    return { pos, t, yaw };
-  };
+  return (clock: THREE.Clock) => sampleFlight(profile, clock);
 }
 
-const PATH_PAIRS: [FlyPath, FlyPath][] = [
-  ["orbit", "figure8"],
-  ["ellipse", "vertical"],
-  ["wave", "orbit"],
-  ["figure8", "wave"],
-  ["vertical", "ellipse"],
-  ["orbit", "wave"],
-  ["ellipse", "figure8"],
+const START_PATHS: FlyPath[] = [
+  "wander",
+  "drift",
+  "lissajous",
+  "spiral",
+  "zigzag",
+  "helix",
+  "figure8",
+  "wave",
+  "ellipse",
+  "orbit",
+  "vertical",
 ];
 
 // ── Honey Bee — yellow/black stripes, fuzzy body ─────────────────────────
-function HoneyBee({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function HoneyBee({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
-  const fly = useFlyMotion(seed, plantHeight, centerY, 0.42, path);
+  const fly = useFlyMotion(seed, plantHeight, centerY, 0.32, path, stage, growth);
   const s = scale;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, t, yaw } = fly(clock);
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw;
-    const flap = Math.sin(clock.elapsedTime * 22 + seed) * 0.75;
+    const flap = Math.sin(clock.elapsedTime * 13 + seed) * 0.75;
     if (wL.current) wL.current.rotation.z = flap;
     if (wR.current) wR.current.rotation.z = -flap;
   });
@@ -178,19 +134,19 @@ function HoneyBee({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectF
 }
 
 // ── Mosquito — long legs, proboscis, delicate wings ───────────────────────
-function Mosquito({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function Mosquito({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
-  const fly = useFlyMotion(seed + 1, plantHeight, centerY, 0.55, path);
+  const fly = useFlyMotion(seed + 1, plantHeight, centerY, 0.38, path, stage, growth);
   const s = scale;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, yaw } = fly(clock);
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw;
-    const flap = Math.sin(clock.elapsedTime * 28 + seed) * 0.85;
+    const flap = Math.sin(clock.elapsedTime * 16 + seed) * 0.85;
     if (wL.current) wL.current.rotation.y = flap;
     if (wR.current) wR.current.rotation.y = -flap;
   });
@@ -248,11 +204,11 @@ function Mosquito({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectF
 }
 
 // ── Monarch Butterfly — orange/black with white spots ─────────────────────
-function MonarchButterfly({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function MonarchButterfly({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
-  const fly = useFlyMotion(seed + 2, plantHeight, centerY, 0.32, path);
+  const fly = useFlyMotion(seed + 2, plantHeight, centerY, 0.26, path, stage, growth);
 
   const wingGeo = useMemo(() => {
     const g = new THREE.PlaneGeometry(0.22, 0.18, 8, 8);
@@ -266,7 +222,7 @@ function MonarchButterfly({ seed, scale, plantHeight, centerY, path = "orbit" }:
     return g;
   }, []);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, t } = fly(clock);
     grp.current.position.copy(pos);
@@ -300,20 +256,20 @@ function MonarchButterfly({ seed, scale, plantHeight, centerY, path = "orbit" }:
 }
 
 // ── Jewel Beetle — metallic green/blue, hard shell ────────────────────────
-function JewelBeetle({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function JewelBeetle({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
-  const fly = useFlyMotion(seed + 3, plantHeight, centerY, 0.38, path);
+  const fly = useFlyMotion(seed + 3, plantHeight, centerY, 0.3, path, stage, growth);
   const shellColor = seed % 2 === 0 ? "#00cc88" : "#2288ff";
   const shellEmissive = seed % 2 === 0 ? "#006644" : "#114488";
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, yaw } = fly(clock);
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw;
-    const flap = Math.sin(clock.elapsedTime * 16 + seed) * 0.55;
+    const flap = Math.sin(clock.elapsedTime * 9 + seed) * 0.55;
     if (wL.current) wL.current.rotation.z = flap;
     if (wR.current) wR.current.rotation.z = -flap;
   });
@@ -358,13 +314,13 @@ function JewelBeetle({ seed, scale, plantHeight, centerY, path = "orbit" }: Inse
 }
 
 // ── Cicada — broad amber wings, bulbous eyes ────────────────────────────
-function Cicada({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function Cicada({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
-  const fly = useFlyMotion(seed + 4, plantHeight, centerY, 0.28, path);
+  const fly = useFlyMotion(seed + 4, plantHeight, centerY, 0.24, path, stage, growth);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, yaw } = fly(clock);
     grp.current.position.copy(pos);
@@ -409,21 +365,21 @@ function Cicada({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFly
 }
 
 // ── Dragonfly — iridescent, four wings, huge eyes ─────────────────────────
-function Dragonfly({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function Dragonfly({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const fWL = useRef<THREE.Mesh>(null);
   const fWR = useRef<THREE.Mesh>(null);
   const bWL = useRef<THREE.Mesh>(null);
   const bWR = useRef<THREE.Mesh>(null);
-  const fly = useFlyMotion(seed + 5, plantHeight, centerY, 0.48, path);
+  const fly = useFlyMotion(seed + 5, plantHeight, centerY, 0.36, path, stage, growth);
   const bodyHue = seed % 2 === 0 ? "#22aacc" : "#44cc88";
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, yaw } = fly(clock);
     grp.current.position.copy(pos);
     grp.current.rotation.y = yaw;
-    const flap = Math.sin(clock.elapsedTime * 18 + seed) * 0.55;
+    const flap = Math.sin(clock.elapsedTime * 10 + seed) * 0.55;
     const rear = Math.sin(clock.elapsedTime * 18 + seed + 0.4) * 0.45;
     if (fWL.current) fWL.current.rotation.z = flap;
     if (fWR.current) fWR.current.rotation.z = -flap;
@@ -488,14 +444,14 @@ function Dragonfly({ seed, scale, plantHeight, centerY, path = "orbit" }: Insect
 }
 
 // ── Firefly — dark body, glowing amber abdomen ──────────────────────────
-function Firefly({ seed, scale, plantHeight, centerY, path = "orbit" }: InsectFlyProps) {
+function Firefly({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit" }: InsectFlyProps) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.PointLight>(null);
-  const fly = useFlyMotion(seed + 6, plantHeight, centerY, 0.36, path);
+  const fly = useFlyMotion(seed + 6, plantHeight, centerY, 0.28, path, stage, growth);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!grp.current) return;
     const { pos, yaw } = fly(clock);
     grp.current.position.copy(pos);
@@ -571,10 +527,18 @@ const GIANT_INSECTS = [
   { id: "firefly", unlockStage: 84, Component: Firefly },
 ] as const;
 
+/** Extra copies — unique seed + path each, same meshes, plant avoidance via flight profile */
+const EXTRA_GIANT_INSECTS = [
+  { id: "bee_copy", unlockStage: 12, Component: HoneyBee, seed: 127, path: "wander" as FlyPath },
+  { id: "mosquito_copy", unlockStage: 24, Component: Mosquito, seed: 241, path: "drift" as FlyPath },
+  { id: "dragonfly_copy_a", unlockStage: 72, Component: Dragonfly, seed: 358, path: "helix" as FlyPath },
+  { id: "dragonfly_copy_b", unlockStage: 72, Component: Dragonfly, seed: 472, path: "figure8" as FlyPath },
+] as const;
+
 export function GiantFlyingInsects({ stage, growth }: Props) {
   const bounds = getPlantWorldBounds(stage, growth);
   const insectScale = getInsectScale(stage, growth);
-  const flyProps = { plantHeight: bounds.worldHeight, centerY: bounds.centerY };
+  const flyProps = { plantHeight: bounds.worldHeight, centerY: bounds.centerY, stage, growth };
 
   return (
     <group>
@@ -582,11 +546,20 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
         if (stage < insect.unlockStage) return null;
         const Insect = insect.Component;
         const progress = Math.min(1, (stage - insect.unlockStage) / 8 + 0.5);
-        const [pathA, pathB] = PATH_PAIRS[i % PATH_PAIRS.length]!;
+        const startPath = START_PATHS[i % START_PATHS.length]!;
         return (
           <group key={insect.id} scale={progress}>
-            <Insect seed={i + 10} scale={insectScale} path={pathA} {...flyProps} />
-            <Insect seed={i + 60} scale={insectScale * 0.95} path={pathB} {...flyProps} />
+            <Insect seed={i + 10} scale={insectScale} path={startPath} {...flyProps} />
+          </group>
+        );
+      })}
+      {EXTRA_GIANT_INSECTS.map((extra) => {
+        if (stage < extra.unlockStage) return null;
+        const Insect = extra.Component;
+        const progress = Math.min(1, (stage - extra.unlockStage) / 8 + 0.5);
+        return (
+          <group key={extra.id} scale={progress}>
+            <Insect seed={extra.seed} scale={insectScale} path={extra.path} {...flyProps} />
           </group>
         );
       })}
