@@ -24,7 +24,6 @@ import { TitleSplash } from "@/components/ui/TitleSplash";
 import { PaymentReturnHandler } from "@/components/ui/PaymentReturnHandler";
 import { StripeCheckoutOverlay } from "@/components/ui/StripeCheckoutOverlay";
 import { PaymentCelebrationModal } from "@/components/ui/PaymentCelebrationModal";
-import { SceneTouchHint } from "@/components/ui/SceneTouchHint";
 import { ADMIN_SECRET } from "@/lib/constants";
 
 const GloobloomScene = dynamic(
@@ -96,8 +95,6 @@ function GloobloomApp() {
       <div className="fixed inset-0 z-0 touch-none">
         <GloobloomScene />
       </div>
-
-      <SceneTouchHint />
 
       {/* UI overlay — interactive controls only */}
       <div className="absolute inset-0 pointer-events-none z-20">
