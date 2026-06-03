@@ -108,7 +108,9 @@ function buildSettings(
       enableCreatures: false,
       enableGiantInsects: true,
       insectMultiplier: 0.08,
-      creatureFrameSkip: ultra ? 3 : 2,
+      // Update flying creatures every frame (ultra_low: every 2nd) so motion
+      // reads as continuous flight instead of the old stuttery skip-stepping.
+      creatureFrameSkip: ultra ? 2 : 1,
       creatureMultiplier: 0,
       enableStars: true,
       maxStarCount: Math.min(s.maxStarCount, ultra ? 128 : 168),

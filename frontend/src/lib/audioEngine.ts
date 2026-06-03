@@ -79,6 +79,9 @@ class AudioEngine {
   private started = false;
   private muted = false;
   private listeners = new Set<Listener>();
+  private moodFreqs: [number, number, number] = getMoodFreqs("content");
+  private melodyTimer: ReturnType<typeof setInterval> | null = null;
+  private melodyStep = 0;
 
   subscribe(fn: Listener) {
     this.listeners.add(fn);
@@ -213,8 +216,76 @@ class AudioEngine {
       reverbGain,
       dryGain,
     };
+    this.moodFreqs = getMoodFreqs("content");
     this.muted = false;
+    this.startMelody();
     this.notify();
+  }
+
+  /**
+   * Slow, sparse bell arpeggio in the current mood's pentatonic scale.
+   * Gives the ambience a gentle, magical "bioluminescent garden" melody
+   * instead of a flat drone — soft enough to stay in the background.
+   */
+  private startMelody() {
+    if (this.melodyTimer) return;
+    const tick = () => this.playMelodyPhrase();
+    // First phrase a touch after the pad fades in, then on a relaxed loop.
+    setTimeout(tick, 2200);
+    this.melodyTimer = setInterval(tick, 3400);
+  }
+
+  private playMelodyPhrase() {
+    const n = this.nodes;
+    if (!n || this.muted) return;
+
+    // Two-octave pentatonic pool drawn from the active mood chord.
+    const [f1, f2, f3] = this.moodFreqs;
+    const pool = [f1 * 2, f2 * 2, f3 * 2, f1 * 3, f2 * 3];
+    const noteCount = 2 + (this.melodyStep % 2); // 2–3 notes per phrase
+    const baseT = n.ctx.currentTime + 0.05;
+
+    for (let i = 0; i < noteCount; i++) {
+      const freq = pool[(this.melodyStep * 2 + i * 3) % pool.length]!;
+      const t = baseT + i * 0.42;
+      this.playBell(freq, t, 0.7 + Math.random() * 0.5);
+    }
+    this.melodyStep++;
+  }
+
+  private playBell(freq: number, startT: number, dur: number) {
+    const n = this.nodes;
+    if (!n) return;
+    const ctx = n.ctx;
+    const mobile = isMobileAudio();
+    const peak = (mobile ? 0.05 : 0.035) * (0.7 + Math.random() * 0.5);
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    // Faint detuned shimmer partner for a glassy, dreamy timbre.
+    const shimmer = ctx.createOscillator();
+    shimmer.type = "triangle";
+    shimmer.frequency.value = freq * 2.01;
+
+    const shimmerGain = ctx.createGain();
+    shimmerGain.gain.value = 0.18;
+    shimmer.connect(shimmerGain);
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, startT);
+    env.gain.linearRampToValueAtTime(peak, startT + 0.06);
+    env.gain.exponentialRampToValueAtTime(0.0001, startT + dur + 1.4);
+
+    osc.connect(env);
+    shimmerGain.connect(env);
+    env.connect(n.reverbConvolver);
+    env.connect(n.masterGain);
+
+    osc.start(startT);
+    shimmer.start(startT);
+    osc.stop(startT + dur + 1.6);
+    shimmer.stop(startT + dur + 1.6);
   }
 
   private applyMasterVolume(volume: number, rampSec = 0.35) {
@@ -248,6 +319,7 @@ class AudioEngine {
     if (!n) return;
 
     const [f1, f2, f3] = getMoodFreqs(mood);
+    this.moodFreqs = [f1, f2, f3];
     const detune = getSeasonDetune(season);
     const t = n.ctx.currentTime;
 
@@ -311,6 +383,10 @@ class AudioEngine {
   }
 
   destroy() {
+    if (this.melodyTimer) {
+      clearInterval(this.melodyTimer);
+      this.melodyTimer = null;
+    }
     this.nodes?.noiseSource?.stop();
     this.nodes?.ctx.close();
     this.nodes = null;

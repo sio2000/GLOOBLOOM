@@ -5,6 +5,8 @@ import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
 import { getStageColor } from "@/types/organism";
 import { getTrunkMetrics } from "@/lib/plantScale";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { mobileDecorCount } from "@/lib/mobileGeoBudget";
 
 interface Props {
   stage: number;
@@ -24,11 +26,12 @@ interface BranchDef {
   childCount: number;
 }
 
-function useBranchDefs(stage: number, growth: number): BranchDef[] {
+function useBranchDefs(stage: number, growth: number, mobileStatic: boolean): BranchDef[] {
   return useMemo(() => {
-    const count = stage >= 50
+    const rawCount = stage >= 50
       ? Math.min(20 + Math.floor((stage - 50) * 0.45), 38)
       : Math.min(4 + Math.floor(stage * 0.5), 20);
+    const count = mobileDecorCount(rawCount, stage, mobileStatic, 6);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + (i % 3) * 0.35,
@@ -37,9 +40,11 @@ function useBranchDefs(stage: number, growth: number): BranchDef[] {
       thickness: 0.018 + (i % 3) * 0.006 + stage * 0.00018,
       phase: (i * 1.618) % (Math.PI * 2),
       heightPos: 0.12 + (i / count) * 0.82,
-      childCount: stage >= 15 ? Math.min(Math.floor(stage / 10), 4) : 0,
+      childCount: stage >= 15
+        ? Math.min(Math.floor(stage / 10), mobileStatic ? 2 : 4)
+        : 0,
     }));
-  }, [Math.floor(stage / 3), Math.floor(growth / 15)]);
+  }, [Math.floor(stage / 3), Math.floor(growth / 15), mobileStatic]);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -204,7 +209,8 @@ function ChildBranch({ index, parentLen, colors, hydration, stage, phase }: {
 }
 
 export function BranchSystem({ stage, growth, hydration, decay }: Props) {
-  const branches = useBranchDefs(stage, growth);
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
+  const branches = useBranchDefs(stage, growth, mobileStatic);
   const colors   = getStageColor(stage);
 
   if (stage < 1) return null;

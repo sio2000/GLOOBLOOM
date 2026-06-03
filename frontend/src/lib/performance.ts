@@ -167,7 +167,7 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     shadowMapSize: 256,
     antialias: true,
     frameSkip: 2,
-    creatureFrameSkip: 3,
+    creatureFrameSkip: 2,
     creatureMultiplier: 0.55,
     insectMultiplier: 0.5,
     pollenMultiplier: 0.55,

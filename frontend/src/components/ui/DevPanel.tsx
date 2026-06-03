@@ -155,7 +155,7 @@ export function DevPanel({ embedded = false }: { embedded?: boolean }) {
   }
 
   return (
-    <div className="fixed bottom-8 left-4 z-50 max-sm:hidden relative">
+    <div className="fixed bottom-8 left-4 z-50 max-sm:hidden">
       <button
         type="button"
         onClick={() => setDesktopOpen((v) => !v)}

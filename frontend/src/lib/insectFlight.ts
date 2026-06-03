@@ -100,7 +100,9 @@ export function createFlightProfile(
 
   return {
     seed,
-    speed: speed * (0.75 + r(1) * 0.85),
+    // Global ~35% faster travel so winged insects look like they're flying,
+    // not slowly drifting around the plant.
+    speed: speed * (0.75 + r(1) * 0.85) * 1.35,
     path,
     pathB: pickPath(900),
     baseR: Math.max(minOrbit, (3.2 + r(2) * 4.0 + plantHeight * 0.16) * scale),

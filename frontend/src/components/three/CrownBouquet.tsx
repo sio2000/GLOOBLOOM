@@ -7,6 +7,7 @@ import { LilyFlower, RoseFlower, TulipFlower } from "./bouquet/ExtendedFlowers";
 import { MAX_ECOSYSTEM_STAGE, extendedHeightDamping, getVisualStageForSizing, LEGACY_MAX_STAGE } from "@/lib/stageConstants";
 import { getTrunkMetrics } from "@/lib/plantScale";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { mobileDecorCount } from "@/lib/mobileGeoBudget";
 
 interface Props {
   stage: number;
@@ -208,7 +209,7 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
   const flowers = useMemo(() => {
     if (stage < 58) return [];
     const vs = visualStage;
-    const count =
+    const rawCount =
       vs >= 300 ? Math.min(80 + Math.floor((vs - 300) * 0.8), 120) :
       vs >= 200 ? Math.min(58 + Math.floor((vs - 200) * 0.6), 85) :
       vs >= 150 ? Math.min(48 + Math.floor((vs - 150) * 0.5), 65) :
@@ -217,6 +218,7 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       vs >= 88 ? Math.min(32 + Math.floor((vs - 88) * 2.2), 48) :
       vs >= 75 ? Math.min(22 + Math.floor((vs - 75) / 1.4), 36) :
       Math.min(10 + Math.floor((vs - 58) / 3), 22);
+    const count = mobileDecorCount(rawCount, stage, mobileStatic, 8);
     return Array.from({ length: count }, (_, i) => {
       const ring = i % 4;
       const angle = (i / count) * Math.PI * 2 + i * 0.62;
@@ -234,12 +236,17 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
         variant: i,
       };
     });
-  }, [stage, visualStage, bouquetScale]);
+  }, [stage, visualStage, bouquetScale, mobileStatic]);
 
   const fillerFlowers = useMemo(() => {
     if (stage < 90) return [];
     const vs = visualStage;
-    const count = Math.min(12 + Math.floor((vs - 90) * 1.5), 24);
+    const count = mobileDecorCount(
+      Math.min(12 + Math.floor((vs - 90) * 1.5), 24),
+      stage,
+      mobileStatic,
+      4
+    );
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + 0.8,
@@ -251,12 +258,17 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       variant: i + 10,
       petalCount: 5 + (i % 3),
     }));
-  }, [stage, visualStage, bouquetScale]);
+  }, [stage, visualStage, bouquetScale, mobileStatic]);
 
   const wrapLeaves = useMemo(() => {
     if (stage < 62) return [];
     const vs = visualStage;
-    const count = Math.min(8 + Math.floor((vs - 62) / 4), vs >= 200 ? 40 : 16);
+    const count = mobileDecorCount(
+      Math.min(8 + Math.floor((vs - 62) / 4), vs >= 200 ? 40 : 16),
+      stage,
+      mobileStatic,
+      4
+    );
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + 0.3,
@@ -264,12 +276,12 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       radius: 0.18 * bouquetScale + (i % 2) * 0.06,
       scale: 0.35 * bouquetScale,
     }));
-  }, [stage, visualStage, bouquetScale]);
+  }, [stage, visualStage, bouquetScale, mobileStatic]);
 
   const roses = useMemo(() => {
     if (stage < 101) return [];
     const vs = visualStage;
-    const count = Math.min(8 + Math.floor((vs - 101) / 8), 45);
+    const count = mobileDecorCount(Math.min(8 + Math.floor((vs - 101) / 8), 45), stage, mobileStatic, 4);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + i * 0.4,
@@ -279,12 +291,12 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       color: ["#e82050", "#ff4080", "#c01840", "#ff6090"][i % 4]!,
       phase: i * 1.3,
     }));
-  }, [stage, visualStage, bouquetScale]);
+  }, [stage, visualStage, bouquetScale, mobileStatic]);
 
   const tulips = useMemo(() => {
     if (stage < 115) return [];
     const vs = visualStage;
-    const count = Math.min(6 + Math.floor((vs - 115) / 10), 35);
+    const count = mobileDecorCount(Math.min(6 + Math.floor((vs - 115) / 10), 35), stage, mobileStatic, 3);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + 1.2,
@@ -294,12 +306,12 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       color: ["#ff6040", "#ffb020", "#ff3080", "#ffe040", "#ff8040"][i % 5]!,
       phase: i * 1.9,
     }));
-  }, [stage, visualStage, bouquetScale]);
+  }, [stage, visualStage, bouquetScale, mobileStatic]);
 
   const lilies = useMemo(() => {
     if (stage < 130) return [];
     const vs = visualStage;
-    const count = Math.min(5 + Math.floor((vs - 130) / 12), 28);
+    const count = mobileDecorCount(Math.min(5 + Math.floor((vs - 130) / 12), 28), stage, mobileStatic, 3);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + 0.6,
@@ -310,7 +322,7 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       accent: "#ffe040",
       phase: i * 2.1,
     }));
-  }, [stage, visualStage, bouquetScale]);
+  }, [stage, visualStage, bouquetScale, mobileStatic]);
 
   useAdaptiveFrame(({ clock }) => {
     if (mobileStatic) return;

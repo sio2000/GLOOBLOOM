@@ -26,11 +26,13 @@ export type TrunkWalkState = {
 };
 
 function cycleProgress(elapsed: number, speed: number, phase: number): number {
-  return ((elapsed * speed * 0.045) + phase) % 1;
+  // Faster crawl cadence so trunk creatures keep moving instead of looking stuck.
+  return ((elapsed * speed * 0.072) + phase) % 1;
 }
 
-const DEFAULT_TRUNK_PAUSE = 0.52;
-const MOBILE_TRUNK_PAUSE = 0.34;
+// Shorter per-step pauses → continuous crawl rather than stop-and-go stutter.
+const DEFAULT_TRUNK_PAUSE = 0.3;
+const MOBILE_TRUNK_PAUSE = 0.2;
 
 function steppedInch(tri: number, pauseRatio = DEFAULT_TRUNK_PAUSE): number {
   const steps = 14;
@@ -91,7 +93,7 @@ export function computeMobileTrunkWalk(
   yMin: number,
   yMax: number
 ): TrunkWalkState {
-  const cycle = ((elapsed * speed * 0.095) + phase) % 1;
+  const cycle = ((elapsed * speed * 0.13) + phase) % 1;
   const direction: 1 | -1 = cycle < 0.5 ? 1 : -1;
   const span = yMax - yMin;
   const t = cycle < 0.5 ? cycle * 2 : (cycle - 0.5) * 2;
