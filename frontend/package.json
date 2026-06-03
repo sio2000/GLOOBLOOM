@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "predev": "powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 3000 -EA SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -EA SilentlyContinue }; exit 0\"",
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",

@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { PaymentPriceBadge } from "@/components/ui/PaymentPriceBadge";
 import { PurchaseQuantityPicker } from "@/components/ui/PurchaseQuantityPicker";
 import { CloseButton } from "@/components/ui/CloseButton";
+import { ModalCancelButton } from "@/components/ui/ModalCancelButton";
 import { priceForQuantity } from "@/lib/payments";
 
 export function LeafModal() {
@@ -152,12 +153,7 @@ export function LeafModal() {
                 </p>
               )}
 
-              <button
-                onClick={() => setShow(false)}
-                className="mt-3 w-full text-[10px] text-white/20 hover:text-white/40 transition-colors"
-              >
-                cancel
-              </button>
+              <ModalCancelButton onClick={() => setShow(false)} />
             </motion.div>
           </motion.div>
         </>
