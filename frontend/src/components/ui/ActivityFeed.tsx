@@ -11,6 +11,7 @@ import { ActivityEntry } from "@/types/organism";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { MobilePanelToggle } from "@/components/ui/MobilePanelToggle";
+import { CloseButton } from "@/components/ui/CloseButton";
 
 const ENTRY_COLORS: Record<string, string> = {
   watering: "text-cyan-400/70",
@@ -162,21 +163,18 @@ export function FeedCommentComposer({ compact = false }: { compact?: boolean }) 
 
 export function ActivityFeed({ layout = "floating" }: { layout?: "floating" | "dock" }) {
   const activities = useOrganismStore((s) => s.activities);
+  const openMobilePanel = useOrganismStore((s) => s.openMobilePanel);
   const mounted = useHasMounted();
   const { isPhone } = useDeviceInfo();
   const [expanded, setExpanded] = useState(false);
   const dockLayout = layout === "dock";
-  const phoneLayout = dockLayout || (mounted && isPhone);
-  const showFullFeed = dockLayout ? expanded : !phoneLayout || expanded;
+  const phoneLayout = dockLayout ? false : mounted && isPhone;
+  const showFullFeed = dockLayout ? true : !phoneLayout || expanded;
 
   useEffect(() => {
     if (!mounted || dockLayout) return;
     setExpanded(!isPhone);
   }, [mounted, isPhone, dockLayout]);
-
-  useEffect(() => {
-    if (dockLayout) setExpanded(false);
-  }, [dockLayout]);
 
   const latest = activities[0];
 
@@ -195,13 +193,21 @@ export function ActivityFeed({ layout = "floating" }: { layout?: "floating" | "d
       <div className="rounded-2xl border border-white/5 bg-black/35 backdrop-blur-xl overflow-hidden pointer-events-auto">
         <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between gap-2">
           <span className="text-[9px] uppercase tracking-widest text-white/25">Live Feed</span>
-          {(dockLayout || phoneLayout) && (
-            <MobilePanelToggle
-              expanded={expanded}
-              onToggle={() => setExpanded((v) => !v)}
-              label={expanded ? "Hide" : "Show"}
-              badge={activities.length || undefined}
+          {dockLayout ? (
+            <CloseButton
+              onClick={() => openMobilePanel(null)}
+              label="Close live feed"
+              className="!min-w-9 !min-h-9 !w-9 !h-9 !text-lg"
             />
+          ) : (
+            phoneLayout && (
+              <MobilePanelToggle
+                expanded={expanded}
+                onToggle={() => setExpanded((v) => !v)}
+                label={expanded ? "Hide" : "Show"}
+                badge={activities.length || undefined}
+              />
+            )
           )}
         </div>
 
@@ -244,16 +250,6 @@ export function ActivityFeed({ layout = "floating" }: { layout?: "floating" | "d
 
         {phoneLayout && !expanded && activities.length === 0 && (
           <p className="text-[9px] text-white/20 py-2 px-3 text-center italic">The organism waits…</p>
-        )}
-
-        {dockLayout && !expanded && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="w-full py-1.5 text-[9px] uppercase tracking-widest text-violet-300/45 border-t border-white/5 hover:text-violet-300/70 transition-colors"
-          >
-            {activities.length > 0 ? "Show feed" : "Open feed"}
-          </button>
         )}
       </div>
     </motion.div>
