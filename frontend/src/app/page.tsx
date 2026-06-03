@@ -168,7 +168,7 @@ function GloobloomApp() {
             <CameraControls />
           </div>
 
-          <MobileCameraControls />
+          <MobileCameraControls appReady={!isLoading} />
 
           <MobileTopUtilityBar />
           <DevPanel />

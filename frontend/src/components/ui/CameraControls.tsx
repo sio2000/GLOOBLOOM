@@ -7,6 +7,7 @@ import { useCameraStore } from "@/store/useCameraStore";
 import { getCameraLimits } from "@/lib/plantScale";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { useTitleSplashVisible } from "@/hooks/useTitleSplashVisible";
 
 function ArrowButton({
   label,
@@ -56,20 +57,24 @@ function ArrowButton({
   );
 }
 
-/** Mobile-only wrapper — shifts controls down when a panel is open. */
-export function MobileCameraControls() {
+/** Mobile-only — hidden during title watermark; same vertical slot afterward. */
+export function MobileCameraControls({ appReady }: { appReady: boolean }) {
+  const mounted = useHasMounted();
+  const splashVisible = useTitleSplashVisible(appReady);
   const statsExpanded = useOrganismStore((s) => s.mobileStatsExpanded);
   const feedOpen = useOrganismStore((s) => s.mobileFeedOpen);
   const loreOpen = useOrganismStore((s) => s.showLoreSheet);
   const devOpen = useOrganismStore((s) => s.mobileDevOpen);
   const panelOpen = statsExpanded || feedOpen || loreOpen || devOpen;
 
+  if (!mounted || splashVisible) return null;
+
   return (
     <div
-      className={`sm:hidden fixed left-2 pointer-events-auto z-20 transition-[top,transform] duration-200 ${
+      className={`sm:hidden fixed pointer-events-auto z-20 transition-[top,left,transform] duration-300 ${
         panelOpen
-          ? "top-[max(8rem,env(safe-area-inset-top))] translate-y-0"
-          : "top-1/2 -translate-y-1/2"
+          ? "left-2 top-[max(8rem,env(safe-area-inset-top))] translate-y-0"
+          : "left-3 top-1/2 -translate-y-1/2"
       }`}
     >
       <CameraControls />

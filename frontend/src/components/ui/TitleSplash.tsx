@@ -1,32 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-/** Loading screen exit fade is 1.5s — wait that out, then +0.5s gap before splash */
-const SPLASH_ENTER_DELAY_MS = 2000;
-const SPLASH_VISIBLE_MS = 4000;
+import { useTitleSplashVisible } from "@/hooks/useTitleSplashVisible";
 
 export function TitleSplash({ show }: { show: boolean }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (!show) {
-      setVisible(false);
-      return;
-    }
-
-    const enterTimer = setTimeout(() => setVisible(true), SPLASH_ENTER_DELAY_MS);
-    const hideTimer = setTimeout(
-      () => setVisible(false),
-      SPLASH_ENTER_DELAY_MS + SPLASH_VISIBLE_MS
-    );
-
-    return () => {
-      clearTimeout(enterTimer);
-      clearTimeout(hideTimer);
-    };
-  }, [show]);
+  const visible = useTitleSplashVisible(show);
 
   return (
     <AnimatePresence>
