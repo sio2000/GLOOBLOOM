@@ -7,6 +7,7 @@ import { getPlantWorldBounds } from "@/lib/plantScale";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
 import { useThrottledFrame } from "@/hooks/useThrottledFrame";
+import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 
 interface Props {
   stage: number;
@@ -497,19 +498,24 @@ function EnergySeed({
 export function HighStageEffects({ stage, growth }: Props) {
   if (stage < 50) return null;
 
+  const device = useDeviceInfo();
   const bounds = getPlantWorldBounds(stage, growth);
   const colors = getStageColor(stage);
-  const moonCount = Math.min(1 + Math.floor((stage - 50) / 15), 4);
+  const moonCount = device.isPhone
+    ? Math.min(1 + Math.floor((stage - 50) / 25), 2)
+    : Math.min(1 + Math.floor((stage - 50) / 15), 4);
 
   return (
     <group>
       <SolarSystem stage={stage} plantHeight={bounds.worldHeight} plantTop={bounds.top} />
-      <AuroraRibbons stage={stage} plantHeight={bounds.worldHeight} centerY={bounds.centerY} color={colors.accent} />
+      {!device.isPhone && (
+        <AuroraRibbons stage={stage} plantHeight={bounds.worldHeight} centerY={bounds.centerY} color={colors.accent} />
+      )}
       {Array.from({ length: moonCount }, (_, i) => (
         <OrbitingMoon key={i} seed={i} plantHeight={bounds.worldHeight} centerY={bounds.centerY} />
       ))}
-      {stage >= 70 && <CometStreak plantHeight={bounds.worldHeight} centerY={bounds.centerY} />}
-      {stage >= 65 && (
+      {stage >= 70 && !device.isPhone && <CometStreak plantHeight={bounds.worldHeight} centerY={bounds.centerY} />}
+      {stage >= 65 && !device.isPhone && (
         <EnergySeeds stage={stage} plantHeight={bounds.worldHeight} centerY={bounds.centerY} accent={colors.accent} />
       )}
     </group>

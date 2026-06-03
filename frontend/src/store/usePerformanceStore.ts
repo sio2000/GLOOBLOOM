@@ -28,16 +28,29 @@ function initialTierForDevice(): QualityTier {
 
 function mobileTune(settings: QualitySettings, isMobile: boolean): QualitySettings {
   if (!isMobile) return settings;
+
+  const vp = getDeviceViewport();
+  const phone = vp.isPhone;
+
   return {
     ...settings,
-    dpr: [Math.min(settings.dpr[0], 0.8), Math.min(settings.dpr[1], 1)] as [number, number],
-    frameSkip: Math.max(settings.frameSkip, 2),
-    starsMultiplier: settings.starsMultiplier * 0.8,
-    sporeMultiplier: settings.sporeMultiplier * 0.85,
-    dustMultiplier: settings.dustMultiplier * 0.8,
-    seasonParticleMultiplier: settings.seasonParticleMultiplier * 0.8,
-    geoQuality: settings.geoQuality * 0.9,
-    animTimeScale: settings.animTimeScale * 0.92,
+    dpr: phone
+      ? ([Math.min(settings.dpr[0], 0.68), Math.min(settings.dpr[1], 0.85)] as [number, number])
+      : ([Math.min(settings.dpr[0], 0.78), Math.min(settings.dpr[1], 0.95)] as [number, number]),
+    frameSkip: Math.max(settings.frameSkip, phone ? 4 : 3),
+    creatureFrameSkip: Math.max(settings.creatureFrameSkip, phone ? 5 : 4),
+    creatureMultiplier: settings.creatureMultiplier * (phone ? 0.55 : 0.75),
+    insectMultiplier: settings.insectMultiplier * (phone ? 0.5 : 0.72),
+    pollenMultiplier: settings.pollenMultiplier * (phone ? 0.5 : 0.72),
+    starsMultiplier: settings.starsMultiplier * (phone ? 0.55 : 0.75),
+    sporeMultiplier: settings.sporeMultiplier * (phone ? 0.6 : 0.82),
+    dustMultiplier: settings.dustMultiplier * (phone ? 0.55 : 0.78),
+    seasonParticleMultiplier: settings.seasonParticleMultiplier * (phone ? 0.55 : 0.78),
+    geoQuality: settings.geoQuality * (phone ? 0.82 : 0.9),
+    animTimeScale: settings.animTimeScale * (phone ? 0.88 : 0.92),
+    bloom: phone ? false : settings.bloom,
+    shadows: phone ? false : settings.shadows,
+    antialias: phone ? false : settings.antialias,
   };
 }
 

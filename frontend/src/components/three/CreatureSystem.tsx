@@ -12,6 +12,8 @@ import {
   buildPlantFlightBounds,
   type PlantFlightBounds,
 } from "@/lib/plantFlightAvoidance";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { scaledCount } from "@/lib/performance";
 
 interface Props {
   stage: number;
@@ -669,21 +671,24 @@ export function CreatureSystem({ stage, hydration, activeCreatures, heightScale,
   const bounds = getPlantWorldBounds(s, growth);
   const { worldHeight: plantHeight, centerY } = bounds;
   const flightBounds = useMemo(() => buildPlantFlightBounds(s, growth), [s, growth]);
+  const creatureMul = usePerformanceStore((st) => st.settings().creatureMultiplier);
+
+  const cap = (n: number, max: number) => scaledCount(Math.min(n, max), creatureMul);
 
   const highTier = s >= 50;
   const extBonus = s >= 101 ? Math.floor((s - 100) / 12) : 0;
-  const fireflyCount    = s >= 3  ? Math.min(2 + Math.floor(s * 0.11) + extBonus, highTier ? 24 : 15) : 0;
-  const dragonflyCount  = s >= 10 ? Math.min(Math.floor((s - 10) * 0.09) + 1 + extBonus, highTier ? 12 : 7) : 0;
-  const wispCount       = s >= 30 ? Math.min(Math.floor((s - 30) * 0.08) + 1, highTier ? 7 : 4) : 0;
-  const butterflyCount  = s >= 18 ? Math.min(Math.floor((s - 18) * 0.1) + 1, highTier ? 10 : 6) : 0;
-  const mothCount       = s >= 28 ? Math.min(Math.floor((s - 28) * 0.08) + 1, highTier ? 8 : 5) : 0;
-  const jellyfishCount  = s >= 40 ? Math.min(Math.floor((s - 40) * 0.09) + 1, highTier ? 10 : 5) : 0;
-  const ufoCount        = s >= 45 ? Math.min(Math.floor((s - 45) * 0.06) + 1, highTier ? 8 : 4) : 0;
-  const birdCount       = s >= 55 ? Math.min(Math.floor((s - 55) * 0.08) + 1, highTier ? 8 : 4) : 0;
-  const plasmaCount     = s >= 70 ? Math.min(Math.floor((s - 70) * 0.07) + 1, highTier ? 8 : 4) : 0;
-  const scarabCount     = s >= 50 ? Math.min(1 + Math.floor((s - 50) / 8), 5) : 0;
-  const lunaMothCount   = s >= 55 ? Math.min(1 + Math.floor((s - 55) / 10), 4) : 0;
-  const hornetCount     = s >= 62 ? Math.min(1 + Math.floor((s - 62) / 12), 3) : 0;
+  const fireflyCount    = cap(s >= 3  ? Math.min(2 + Math.floor(s * 0.11) + extBonus, highTier ? 24 : 15) : 0, 24);
+  const dragonflyCount  = cap(s >= 10 ? Math.min(Math.floor((s - 10) * 0.09) + 1 + extBonus, highTier ? 12 : 7) : 0, 12);
+  const wispCount       = cap(s >= 30 ? Math.min(Math.floor((s - 30) * 0.08) + 1, highTier ? 7 : 4) : 0, 7);
+  const butterflyCount  = cap(s >= 18 ? Math.min(Math.floor((s - 18) * 0.1) + 1, highTier ? 10 : 6) : 0, 10);
+  const mothCount       = cap(s >= 28 ? Math.min(Math.floor((s - 28) * 0.08) + 1, highTier ? 8 : 5) : 0, 8);
+  const jellyfishCount  = cap(s >= 40 ? Math.min(Math.floor((s - 40) * 0.09) + 1, highTier ? 10 : 5) : 0, 10);
+  const ufoCount        = cap(s >= 45 ? Math.min(Math.floor((s - 45) * 0.06) + 1, highTier ? 8 : 4) : 0, 8);
+  const birdCount       = cap(s >= 55 ? Math.min(Math.floor((s - 55) * 0.08) + 1, highTier ? 8 : 4) : 0, 8);
+  const plasmaCount     = cap(s >= 70 ? Math.min(Math.floor((s - 70) * 0.07) + 1, highTier ? 8 : 4) : 0, 8);
+  const scarabCount     = cap(s >= 50 ? Math.min(1 + Math.floor((s - 50) / 8), 5) : 0, 5);
+  const lunaMothCount   = cap(s >= 55 ? Math.min(1 + Math.floor((s - 55) / 10), 4) : 0, 4);
+  const hornetCount     = cap(s >= 62 ? Math.min(1 + Math.floor((s - 62) / 12), 3) : 0, 3);
 
   const creatureProps = { plantHeight, centerY, stage: s, growth, flightBounds };
 

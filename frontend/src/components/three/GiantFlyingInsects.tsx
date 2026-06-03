@@ -9,6 +9,8 @@ import {
   sampleFlight,
   type FlyPath,
 } from "@/lib/insectFlight";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 
 interface Props {
   stage: number;
@@ -539,11 +541,21 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
   const bounds = getPlantWorldBounds(stage, growth);
   const insectScale = getInsectScale(stage, growth);
   const flyProps = { plantHeight: bounds.worldHeight, centerY: bounds.centerY, stage, growth };
+  const device = useDeviceInfo();
+  const insectMul = usePerformanceStore((s) => s.settings().insectMultiplier);
+  const showExtras = !device.isPhone && insectMul >= 0.65;
+
+  const showGiant = (index: number) => {
+    if (index === 0) return true;
+    if (device.isPhone) return index % 2 === 0;
+    if (insectMul < 0.85) return index % 2 === 0;
+    return true;
+  };
 
   return (
     <group>
       {GIANT_INSECTS.map((insect, i) => {
-        if (stage < insect.unlockStage) return null;
+        if (stage < insect.unlockStage || !showGiant(i)) return null;
         const Insect = insect.Component;
         const progress = Math.min(1, (stage - insect.unlockStage) / 8 + 0.5);
         const startPath = START_PATHS[i % START_PATHS.length]!;
@@ -553,7 +565,8 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
           </group>
         );
       })}
-      {EXTRA_GIANT_INSECTS.map((extra) => {
+      {showExtras &&
+        EXTRA_GIANT_INSECTS.map((extra) => {
         if (stage < extra.unlockStage) return null;
         const Insect = extra.Component;
         const progress = Math.min(1, (stage - extra.unlockStage) / 8 + 0.5);

@@ -83,7 +83,9 @@ export function ParticleField({ stage, hydration, season, growth }: Props) {
       <DustMotes stage={stage} colors={colors} />
 
       {/* Pollen orbs — visible but not blinding */}
-      {stage >= 4 && <PollenOrbs stage={stage} hydration={hydration} colors={colors} />}
+      {stage >= 4 && (
+        <PollenOrbs stage={stage} hydration={hydration} colors={colors} />
+      )}
 
       {/* Season effects */}
       {season === "neon_rain" && <NeonRain colors={colors} multiplier={seasonMultiplier} />}
@@ -147,8 +149,10 @@ function DustMotes({
 function PollenOrbs({
   stage, hydration, colors,
 }: { stage: number; hydration: number; colors: { glow: string; accent: string } }) {
+  const pollenMul = usePerformanceStore((s) => s.settings().pollenMultiplier);
   const orbs = useMemo(() => {
-    const cnt = Math.min(6 + (stage - 3) * 4, 26);
+    const base = Math.min(6 + (stage - 3) * 4, 26);
+    const cnt = scaledCount(base, pollenMul);
     return Array.from({ length: cnt }, (_, i) => {
       const angle = (i / cnt) * Math.PI * 2;
       const r     = 0.75 + Math.random() * 1.6;
@@ -160,7 +164,7 @@ function PollenOrbs({
         col:   i % 2 === 0 ? colors.glow : colors.accent,
       };
     });
-  }, [stage]);
+  }, [stage, colors.glow, colors.accent, pollenMul]);
 
   return (
     <group>

@@ -42,6 +42,7 @@ import { getScales, getCameraLimits } from "@/lib/plantScale";
 import { scaledCount } from "@/lib/performance";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 import { useScenePaused } from "@/hooks/useUiOverlayActive";
+import { MobileTouchPan } from "./MobileTouchPan";
 
 function SceneLighting({ stage, season, hydration, castShadow, shadowMapSize }: {
   stage: number; season: Season; hydration: number;
@@ -106,9 +107,11 @@ function PostProcessing({ stage, enabled, multisampling }: { stage: number; enab
 function CameraRig({
   limits,
   isMobile,
+  isPhone,
 }: {
   limits: ReturnType<typeof getCameraLimits>;
   isMobile: boolean;
+  isPhone: boolean;
 }) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
@@ -147,7 +150,7 @@ function CameraRig({
       zoomSpeed={isMobile ? 1.1 : 1.5}
       panSpeed={isMobile ? 0.4 : 0.65}
       enableRotate
-      autoRotate={!isMobile}
+      autoRotate={!isMobile && !isPhone}
       autoRotateSpeed={isMobile ? 0.06 : 0.12}
       makeDefault
     />
@@ -157,9 +160,11 @@ function CameraRig({
 function CameraSetup({
   limits,
   isMobile,
+  isPhone,
 }: {
   limits: ReturnType<typeof getCameraLimits>;
   isMobile: boolean;
+  isPhone: boolean;
 }) {
   const { camera } = useThree();
 
@@ -173,12 +178,13 @@ function CameraSetup({
     camera.updateProjectionMatrix();
   }, [camera, limits.cameraY, limits.cameraZ, limits.fov, limits.fogFar]);
 
-  return <CameraRig limits={limits} isMobile={isMobile} />;
+  return <CameraRig limits={limits} isMobile={isMobile} isPhone={isPhone} />;
 }
 
 function PerformanceController() {
   const init = usePerformanceStore((s) => s.init);
   const degrade = usePerformanceStore((s) => s.degrade);
+  const improve = usePerformanceStore((s) => s.improve);
   const device = useDeviceInfo();
 
   useEffect(() => { init(); }, [init]);
@@ -187,6 +193,7 @@ function PerformanceController() {
     <PerformanceMonitor
       flipflops={device.isMobile ? 2 : 4}
       onDecline={degrade}
+      onIncline={device.isMobile ? improve : undefined}
     />
   );
 }
@@ -212,7 +219,7 @@ function SceneContent() {
 
   return (
     <>
-      <CameraSetup limits={cameraLimits} isMobile={device.isMobile} />
+      <CameraSetup limits={cameraLimits} isMobile={device.isMobile} isPhone={device.isPhone} />
       <SceneLighting
         stage={stage}
         season={season}
@@ -275,6 +282,7 @@ function SceneContent() {
 }
 
 export function GloobloomScene() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const state = useOrganismStore((s) => s.state);
   const stage = state?.ecosystemStage ?? 1;
   const growth = state?.growth ?? 0;
@@ -292,7 +300,8 @@ export function GloobloomScene() {
   useEffect(() => { initPerf(); }, [initPerf]);
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] touch-none">
+    <div ref={containerRef} className="fixed inset-0 w-full h-[100dvh] touch-none">
+      <MobileTouchPan containerRef={containerRef} />
       <Canvas
         frameloop={scenePaused ? "never" : "always"}
         shadows={perf.shadows}

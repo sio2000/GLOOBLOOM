@@ -10,7 +10,7 @@ export function useCreatureFrame(
   const accumDelta = useRef(0);
 
   useFrame((state, delta) => {
-    const frameSkip = usePerformanceStore.getState().settings().frameSkip;
+    const frameSkip = usePerformanceStore.getState().settings().creatureFrameSkip;
     accumDelta.current += delta;
     counter.current += 1;
     if (counter.current % frameSkip !== 0) return;

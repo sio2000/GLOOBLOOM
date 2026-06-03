@@ -4,6 +4,7 @@ interface CameraStore {
   viewOffsetY: number;
   nudgeUp: (step: number, max: number) => void;
   nudgeDown: (step: number, max: number) => void;
+  shiftViewOffsetY: (delta: number, max: number) => void;
   resetView: () => void;
 }
 
@@ -15,6 +16,11 @@ export const useCameraStore = create<CameraStore>((set, get) => ({
 
   nudgeDown: (step, max) =>
     set({ viewOffsetY: Math.max(-max, get().viewOffsetY - step) }),
+
+  shiftViewOffsetY: (delta, max) =>
+    set({
+      viewOffsetY: Math.max(-max, Math.min(max, get().viewOffsetY + delta)),
+    }),
 
   resetView: () => set({ viewOffsetY: 0 }),
 }));

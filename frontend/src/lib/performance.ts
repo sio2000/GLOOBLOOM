@@ -15,6 +15,14 @@ export interface QualitySettings {
   seasonParticleMultiplier: number;
   /** Run heavy CPU animation loops every N frames */
   frameSkip: number;
+  /** Throttle flying creatures separately — higher = less CPU */
+  creatureFrameSkip: number;
+  /** Scale creature instance counts (0.35–1) — visual density, not motion */
+  creatureMultiplier: number;
+  /** Scale giant insect copies (0.35–1) */
+  insectMultiplier: number;
+  /** Scale pollen orb count */
+  pollenMultiplier: number;
   /** Scale geometry segment counts (0.4–1) */
   geoQuality: number;
   /** Scale animation time — slower motion on weak devices, same scene content */
@@ -37,6 +45,10 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     dustMultiplier: 0.35,
     seasonParticleMultiplier: 0.4,
     frameSkip: 3,
+    creatureFrameSkip: 4,
+    creatureMultiplier: 0.42,
+    insectMultiplier: 0.45,
+    pollenMultiplier: 0.45,
     geoQuality: 0.45,
     animTimeScale: 0.38,
   },
@@ -53,6 +65,10 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     dustMultiplier: 0.6,
     seasonParticleMultiplier: 0.65,
     frameSkip: 2,
+    creatureFrameSkip: 3,
+    creatureMultiplier: 0.72,
+    insectMultiplier: 0.7,
+    pollenMultiplier: 0.7,
     geoQuality: 0.72,
     animTimeScale: 0.68,
   },
@@ -69,6 +85,10 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     dustMultiplier: 1,
     seasonParticleMultiplier: 1,
     frameSkip: 1,
+    creatureFrameSkip: 2,
+    creatureMultiplier: 1,
+    insectMultiplier: 1,
+    pollenMultiplier: 1,
     geoQuality: 1,
     animTimeScale: 1,
   },

@@ -111,16 +111,28 @@ export function CameraControls() {
     return () => window.removeEventListener("keydown", onKey);
   }, [limits.panRange, limits.panStep, nudgeDown, nudgeUp, resetView]);
 
-  if (!mounted || device.isPhone) {
+  if (!mounted) {
     return null;
   }
 
+  const phoneLayout = device.isPhone;
+
   return (
-    <div className="flex flex-col items-center gap-3 max-sm:gap-2">
+    <div
+      className={
+        phoneLayout
+          ? "flex flex-col items-center gap-2"
+          : "flex flex-col items-center gap-3 max-sm:gap-2"
+      }
+    >
       <div
-        className="flex flex-col items-center gap-3 max-sm:gap-2 p-3 max-sm:p-2 rounded-3xl max-sm:rounded-2xl
+        className={
+          phoneLayout
+            ? "flex flex-col items-center gap-2 p-2 rounded-2xl border border-white/10 bg-black/45 backdrop-blur-xl shadow-lg"
+            : `flex flex-col items-center gap-3 max-sm:gap-2 p-3 max-sm:p-2 rounded-3xl max-sm:rounded-2xl
           border border-white/8 bg-black/40 backdrop-blur-2xl
-          shadow-[0_12px_48px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]"
+          shadow-[0_12px_48px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]`
+        }
       >
         <ArrowButton
           label="Move view up"
@@ -129,6 +141,7 @@ export function CameraControls() {
           onRelease={stopRepeat}
         />
 
+        {!phoneLayout && (
         <motion.button
           type="button"
           onClick={resetView}
@@ -154,6 +167,7 @@ export function CameraControls() {
             </span>
           </span>
         </motion.button>
+        )}
 
         <ArrowButton
           label="Move view down"
@@ -163,8 +177,8 @@ export function CameraControls() {
         />
 
         {Math.abs(viewOffsetY) > 0.05 && (
-          <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/20">
-            <p className="text-[10px] text-emerald-300/70 tracking-wide">shifted</p>
+          <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-400/20">
+            <p className="text-[9px] text-emerald-300/70 tracking-wide">shifted</p>
           </div>
         )}
       </div>

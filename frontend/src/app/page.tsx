@@ -112,6 +112,10 @@ function GloobloomApp() {
             <CameraControls />
           </div>
 
+          <div className="sm:hidden fixed left-2 z-30 pointer-events-auto top-1/2 -translate-y-1/2">
+            <CameraControls />
+          </div>
+
           <MobileTopUtilityBar />
           <DevPanel />
         </div>
