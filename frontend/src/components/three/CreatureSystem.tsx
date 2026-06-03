@@ -13,6 +13,7 @@ import {
   type PlantFlightBounds,
 } from "@/lib/plantFlightAvoidance";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { limitMobileSpeciesCount } from "@/lib/sceneBackground";
 import { scaledCount } from "@/lib/performance";
 import { scratchPosition } from "@/lib/creatureVisibility";
 
@@ -752,14 +753,11 @@ export function CreatureSystem({ stage, hydration, activeCreatures, heightScale,
   const flightBounds = useMemo(() => buildPlantFlightBounds(s, growth), [s, growth]);
   const creatureMul = usePerformanceStore((st) => st.settings().creatureMultiplier);
   const tier = usePerformanceStore((st) => st.tier);
+  const mobileLite = tier === "ultra_low" || tier === "low";
 
   const cap = (n: number, max: number) => {
     let count = scaledCount(Math.min(n, max), creatureMul);
-    if (tier === "ultra_low") {
-      count = Math.min(count, Math.max(3, Math.ceil(max * 0.82)));
-    } else if (tier === "low") {
-      count = Math.min(count, Math.max(3, Math.ceil(max * 0.9)));
-    }
+    count = limitMobileSpeciesCount(count, mobileLite, 2);
     return count;
   };
 

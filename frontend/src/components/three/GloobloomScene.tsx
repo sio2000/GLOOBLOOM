@@ -30,6 +30,7 @@ import { SceneDemandDriver } from "./SceneDemandDriver";
 import { AdaptivePerformanceMonitor } from "./AdaptivePerformanceMonitor";
 import { LazyWorldContent } from "./LazyWorldContent";
 import { requestSceneRender } from "@/lib/sceneRuntime";
+import { getSceneSkyColor, SCENE_SKY_HEX } from "@/lib/sceneBackground";
 
 function PostProcessing({
   stage,
@@ -225,12 +226,10 @@ function CameraRig({
 
 /** Keeps fog end beyond camera distance so zoom-out does not wash the scene to black. */
 function ZoomAwareFog({
-  stage,
   baseNear,
   baseFar,
   targetY,
 }: {
-  stage: number;
   baseNear: number;
   baseFar: number;
   targetY: number;
@@ -238,7 +237,7 @@ function ZoomAwareFog({
   const { camera, scene } = useThree();
   const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
   const target = useMemo(() => new THREE.Vector3(), []);
-  const fogColor = useMemo(() => new THREE.Color(getStageColor(stage).fog), [stage]);
+  const fogColor = useMemo(() => getSceneSkyColor(), []);
 
   const apply = () => {
     target.set(0, targetY + viewOffsetY, 0);
@@ -257,7 +256,7 @@ function ZoomAwareFog({
   useEffect(() => {
     apply();
     requestSceneRender();
-  }, [stage, baseNear, baseFar, targetY, viewOffsetY]);
+  }, [baseNear, baseFar, targetY, viewOffsetY, fogColor]);
 
   useFrame(() => {
     apply();
@@ -341,12 +340,12 @@ function SceneContent() {
 
       {starCount > 0 && (
         <Stars
-          radius={100}
-          depth={60}
+          radius={220}
+          depth={120}
           count={starCount}
-          factor={3.5}
-          saturation={0.5}
-          fade
+          factor={4.2}
+          saturation={0.35}
+          fade={false}
           speed={perf.mobileStatic ? 0 : 0.25}
         />
       )}
@@ -370,7 +369,6 @@ function SceneContent() {
       />
 
       <ZoomAwareFog
-        stage={stage}
         baseNear={cameraLimits.fogNear}
         baseFar={fogFar}
         targetY={cameraLimits.targetY}
@@ -390,12 +388,7 @@ export function GloobloomScene() {
   const tier = usePerformanceStore((s) => s.tier);
   const device = useDeviceInfo();
   const sceneFrozen = useSceneRuntimeStore((s) => s.sceneFrozen);
-  const sceneBg = useMemo(() => {
-    const c = getStageColor(stage ?? 1);
-    const col = new THREE.Color(c.fog);
-    col.lerp(new THREE.Color(c.glow), device.isMobile ? 0.2 : 0.1);
-    return col;
-  }, [stage, device.isMobile]);
+  const sceneBg = useMemo(() => getSceneSkyColor(), []);
   const cameraLimits = getCameraLimits(stage, growth, {
     isMobile: device.isMobile,
     isPortrait: device.isPortrait,
@@ -438,6 +431,9 @@ export function GloobloomScene() {
           depth: true,
         }}
         scene={{ background: sceneBg }}
+        onCreated={({ scene }) => {
+          scene.background = new THREE.Color(SCENE_SKY_HEX);
+        }}
       >
         <AdaptiveDpr pixelated />
         <Suspense fallback={null}>

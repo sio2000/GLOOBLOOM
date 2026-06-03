@@ -65,10 +65,6 @@ export function LazyWorldContent({
         </SceneVisibilityGate>
       )}
 
-      {perf.enableRootDecor && perf.mobileStatic && phaseOk(1) && (
-        <StaticRootAmbience stage={stage} decay={decay} />
-      )}
-
       {perf.enableRootDecor && phaseOk(2) && (
         <SceneVisibilityGate worldY={-1}>
           <RootMushroomSystem
@@ -87,6 +83,9 @@ export function LazyWorldContent({
       )}
 
       <group position={[0, -0.3, 0]} scale={[widthScale, heightScale, widthScale]}>
+        {perf.enableRootDecor && perf.mobileStatic && phaseOk(1) && (
+          <StaticRootAmbience stage={stage} growth={growth} decay={decay} />
+        )}
         <OrganismCore
           hydration={hydration}
           growth={growth}

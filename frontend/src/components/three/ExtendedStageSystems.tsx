@@ -21,6 +21,7 @@ import { AnimatedCaterpillar } from "./insects/AnimatedCaterpillar";
 import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import { applyPlantAvoidance, buildPlantFlightBounds } from "@/lib/plantFlightAvoidance";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { limitMobileSpeciesCount } from "@/lib/sceneBackground";
 
 interface Props {
   stage: number;
@@ -275,7 +276,8 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
   );
 
   const flyers = useMemo(() => {
-    const count = capN(Math.min(3 + Math.floor((stage - 101) / 18), 12), 3);
+    let count = Math.min(3 + Math.floor((stage - 101) / 18), 12);
+    count = capN(limitMobileSpeciesCount(count, lite, 2), 2);
     return Array.from({ length: count }, (_, i) => i);
   }, [stage, lite]);
 
@@ -312,7 +314,7 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
           growth={growth}
         />
       ))}
-      {trunkButterflies.map((c) => (
+      {trunkButterflies.slice(0, lite ? 2 : trunkButterflies.length).map((c) => (
         <TrunkButterflyClimber
           key={c.id}
           yMin={c.yMin}
