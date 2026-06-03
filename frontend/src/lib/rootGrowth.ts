@@ -118,15 +118,21 @@ export function getCappedRootMushroomScale(
   return rootDecorScaleLocal(totalWaterings, stage, growth, ROOT_DECOR_PLANT_FRACTION) * heightMul;
 }
 
-/** Mobile static root toadstools — half the desktop cap, plateau at max (no further growth). */
+/** Mobile static root toadstools — half desktop cap, visible at root, hard max (no giant growth). */
 export function getMobileStaticMushroomScale(
   totalWaterings: number,
   stage: number,
   growth: number,
-  heightMul: number
+  heightMul: number,
+  trunkRadiusBottom: number
 ): number {
   const MOBILE_MUSHROOM_PLANT_FRACTION = ROOT_DECOR_PLANT_FRACTION * 0.5;
-  return rootDecorScaleLocal(totalWaterings, stage, growth, MOBILE_MUSHROOM_PLANT_FRACTION) * heightMul;
+  const decorLocal =
+    rootDecorScaleLocal(totalWaterings, stage, growth, MOBILE_MUSHROOM_PLANT_FRACTION) *
+    heightMul;
+  const minLocal = Math.max(0.48, trunkRadiusBottom * 9) * heightMul;
+  const maxLocal = Math.max(0.62, trunkRadiusBottom * 12) * heightMul;
+  return Math.min(Math.max(decorLocal, minLocal), maxLocal);
 }
 
 export interface RootPlacementDef {

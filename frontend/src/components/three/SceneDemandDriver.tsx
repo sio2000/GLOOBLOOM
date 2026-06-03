@@ -48,8 +48,8 @@ export function SceneDemandDriver() {
         const beesOnly = insectsOn && !creaturesOn;
         const ms = beesOnly
           ? tier === "ultra_low"
-            ? 380
-            : 320
+            ? 480
+            : 420
           : tier === "ultra_low"
             ? 6000
             : 4500;

@@ -108,7 +108,7 @@ function buildSettings(
       enableCreatures: false,
       enableGiantInsects: true,
       insectMultiplier: 0.08,
-      creatureFrameSkip: ultra ? 2 : 2,
+      creatureFrameSkip: ultra ? 3 : 2,
       creatureMultiplier: 0,
       enableStars: true,
       maxStarCount: Math.min(s.maxStarCount, ultra ? 128 : 168),

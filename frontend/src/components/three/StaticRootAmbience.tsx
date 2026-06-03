@@ -288,7 +288,13 @@ export function StaticRootAmbience({
       },
     ].map((m) => ({
       ...m,
-      scale: getMobileStaticMushroomScale(totalWaterings, stage, growth, m.heightMul),
+      scale: getMobileStaticMushroomScale(
+        totalWaterings,
+        stage,
+        growth,
+        m.heightMul,
+        trunk.trunkRadiusBottom
+      ),
     }));
   }, [minimalFlame, rootY, trunk.trunkRadiusBottom, totalWaterings, stage, growth]);
 

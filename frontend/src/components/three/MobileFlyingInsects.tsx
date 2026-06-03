@@ -60,7 +60,7 @@ function useMobileFly(
   return (clock: THREE.Clock) => smooth(profile, clock);
 }
 
-function LiteHoneyBee({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit", speed = 0.58 }: FlyBase) {
+function LiteHoneyBee({ seed, scale, plantHeight, centerY, stage, growth, path = "orbit", speed = 0.5 }: FlyBase) {
   const grp = useRef<THREE.Group>(null);
   const wL = useRef<THREE.Mesh>(null);
   const wR = useRef<THREE.Mesh>(null);

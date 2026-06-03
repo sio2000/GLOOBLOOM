@@ -3,14 +3,14 @@ import type { FlyPath } from "@/lib/insectFlight";
 
 /** Hard caps — tuned for smooth demand-mode pan/zoom. */
 export const MOBILE_FLIGHT_CAP: Record<"ultra_low" | "low", number> = {
-  ultra_low: 5,
-  low: 6,
+  ultra_low: 4,
+  low: 5,
 };
 
 /** Max giant species (besides bees) per tier. */
 export const MOBILE_GIANT_CAP: Record<"ultra_low" | "low", number> = {
-  ultra_low: 3,
-  low: 4,
+  ultra_low: 2,
+  low: 3,
 };
 
 /** Always prefer two bees on mobile when stage allows — giants fill remaining slots. */
@@ -41,11 +41,11 @@ export interface MobileStageGiant {
 
 /** One giant species per stage band (bee handled separately). */
 export const MOBILE_STAGE_GIANTS: MobileStageGiant[] = [
-  { kind: "mosquito", unlockStage: 24, path: "drift", speed: 0.58, seed: 24 },
-  { kind: "monarch", unlockStage: 36, path: "ellipse", speed: 0.54, seed: 36 },
-  { kind: "beetle", unlockStage: 48, path: "orbit", speed: 0.56, seed: 48 },
-  { kind: "dragonfly", unlockStage: 60, path: "wave", speed: 0.58, seed: 72 },
-  { kind: "firefly", unlockStage: 72, path: "drift", speed: 0.5, seed: 84 },
+  { kind: "mosquito", unlockStage: 24, path: "drift", speed: 0.5, seed: 24 },
+  { kind: "monarch", unlockStage: 36, path: "ellipse", speed: 0.46, seed: 36 },
+  { kind: "beetle", unlockStage: 48, path: "orbit", speed: 0.48, seed: 48 },
+  { kind: "dragonfly", unlockStage: 60, path: "wave", speed: 0.5, seed: 72 },
+  { kind: "firefly", unlockStage: 72, path: "drift", speed: 0.42, seed: 84 },
 ];
 
 export function mobileTierKey(
