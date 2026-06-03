@@ -15,13 +15,19 @@ import {
   MicroEvolutionEvent,
   RareEvent,
   Season,
+  LeafData,
 } from "@/types/organism";
+import {
+  isMobileRuntime,
+  throttle,
+  MOBILE_WS_STATE_THROTTLE_MS,
+  MOBILE_WS_LEAVES_THROTTLE_MS,
+} from "@/lib/mobilePerf";
 
 let socketInstance: Socket | null = null;
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
-  const store = useOrganismStore();
 
   useEffect(() => {
     if (socketInstance) {
@@ -30,10 +36,11 @@ export function useSocket() {
     }
 
     const sessionId = getOrCreateSessionId();
+    const mobile = isMobileRuntime();
 
     const socket = io(WS_URL, {
       query: { sessionId },
-      transports: ["websocket", "polling"],
+      transports: mobile ? ["websocket"] : ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
@@ -41,6 +48,18 @@ export function useSocket() {
 
     socketInstance = socket;
     socketRef.current = socket;
+
+    const onOrganismState = (state: OrganismState) =>
+      useOrganismStore.getState().setState(state);
+    const onLeavesUpdate = (leaves: LeafData[]) =>
+      useOrganismStore.getState().setLeaves(leaves);
+
+    const throttledState = mobile
+      ? throttle(onOrganismState, MOBILE_WS_STATE_THROTTLE_MS)
+      : null;
+    const throttledLeaves = mobile
+      ? throttle(onLeavesUpdate, MOBILE_WS_LEAVES_THROTTLE_MS)
+      : null;
 
     socket.on("connect", () => {
       console.log("[WS] Connected:", socket.id);
@@ -50,24 +69,19 @@ export function useSocket() {
       console.log("[WS] Disconnected:", reason);
     });
 
-    socket.on("organism_state", (state: OrganismState) => {
-      store.setState(state);
-    });
-
-    socket.on("leaves_update", (leaves) => {
-      store.setLeaves(leaves);
-    });
+    socket.on("organism_state", throttledState ?? onOrganismState);
+    socket.on("leaves_update", throttledLeaves ?? onLeavesUpdate);
 
     socket.on("activity", (entry: ActivityEntry) => {
-      store.addActivity(entry);
+      useOrganismStore.getState().addActivity(entry);
     });
 
     socket.on("online_count", (count: number) => {
-      store.setOnlineCount(count);
+      useOrganismStore.getState().setOnlineCount(count);
     });
 
     socket.on("watering_effect", (data: WateringEffect) => {
-      store.addWateringEffect({
+      useOrganismStore.getState().addWateringEffect({
         id: `we_${Date.now()}_${Math.random()}`,
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
@@ -77,37 +91,56 @@ export function useSocket() {
     });
 
     socket.on("bloom_event", (data: BloomEvent) => {
+      const store = useOrganismStore.getState();
       store.setPendingBloom(data);
       store.showNotif(`🌸 ${data.flowerType} bloomed`, "bloom");
-      setTimeout(() => store.setPendingBloom(null), 4000);
+      setTimeout(() => useOrganismStore.getState().setPendingBloom(null), 4000);
     });
 
     socket.on("creature_spawn", (data: CreatureSpawnEvent) => {
-      store.addCreature({ id: data.id, type: data.type });
-      setTimeout(() => store.removeCreature(data.id), 25000);
+      useOrganismStore.getState().addCreature({ id: data.id, type: data.type });
+      setTimeout(() => useOrganismStore.getState().removeCreature(data.id), 25000);
     });
 
     socket.on("mutation_event", (data: MutationEvent) => {
+      const store = useOrganismStore.getState();
       store.setPendingMutation(data);
       store.showNotif(`✨ ${data.description}`, "mutation");
-      setTimeout(() => store.setPendingMutation(null), 6000);
+      setTimeout(() => useOrganismStore.getState().setPendingMutation(null), 6000);
     });
 
     socket.on("season_change", (season: Season) => {
-      store.showNotif(`🌙 Season changed: ${season.replace("_", " ")}`, "season");
+      useOrganismStore.getState().showNotif(`🌙 Season changed: ${season.replace("_", " ")}`, "season");
     });
 
     socket.on("rare_event", (data: RareEvent) => {
+      const store = useOrganismStore.getState();
       store.setPendingRareEvent(data);
       store.showNotif(`🌟 RARE: ${data.name}`, "rare");
-      setTimeout(() => store.setPendingRareEvent(null), 8000);
+      setTimeout(() => useOrganismStore.getState().setPendingRareEvent(null), 8000);
     });
 
     socket.on("micro_evolution", (data: MicroEvolutionEvent) => {
-      store.showNotif(`🧬 ${data.message}`, "micro_evolution");
+      useOrganismStore.getState().showNotif(`🧬 ${data.message}`, "micro_evolution");
     });
 
-    return () => {};
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("organism_state", throttledState ?? onOrganismState);
+      socket.off("leaves_update", throttledLeaves ?? onLeavesUpdate);
+      socket.off("activity");
+      socket.off("online_count");
+      socket.off("watering_effect");
+      socket.off("bloom_event");
+      socket.off("creature_spawn");
+      socket.off("mutation_event");
+      socket.off("season_change");
+      socket.off("rare_event");
+      socket.off("micro_evolution");
+      throttledState?.cancel();
+      throttledLeaves?.cancel();
+    };
   }, []);
 
   const water = (username: string) => {

@@ -34,7 +34,7 @@ const TIER_ORDER: QualityTier[] = ["low", "medium", "high"];
 export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
   low: {
     tier: "low",
-    dpr: [0.75, 1],
+    dpr: [0.65, 0.85],
     shadows: false,
     shadowMapSize: 0,
     antialias: false,

@@ -42,15 +42,16 @@ function mobileTune(settings: QualitySettings, isMobile: boolean): QualitySettin
     creatureMultiplier: settings.creatureMultiplier * (phone ? 0.55 : 0.75),
     insectMultiplier: settings.insectMultiplier * (phone ? 0.5 : 0.72),
     pollenMultiplier: settings.pollenMultiplier * (phone ? 0.5 : 0.72),
-    starsMultiplier: settings.starsMultiplier * (phone ? 0.55 : 0.75),
+    starsMultiplier: settings.starsMultiplier * (phone ? 0.28 : 0.48),
     sporeMultiplier: settings.sporeMultiplier * (phone ? 0.6 : 0.82),
     dustMultiplier: settings.dustMultiplier * (phone ? 0.55 : 0.78),
     seasonParticleMultiplier: settings.seasonParticleMultiplier * (phone ? 0.55 : 0.78),
-    geoQuality: settings.geoQuality * (phone ? 0.82 : 0.9),
-    animTimeScale: settings.animTimeScale * (phone ? 0.88 : 0.92),
+    geoQuality: settings.geoQuality * (phone ? 0.62 : 0.77),
+    animTimeScale: settings.animTimeScale * (phone ? 0.72 : 0.84),
     bloom: phone ? false : settings.bloom,
     shadows: phone ? false : settings.shadows,
     antialias: phone ? false : settings.antialias,
+    bloomMultisampling: phone ? 0 : settings.bloomMultisampling,
   };
 }
 

@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  compress: true,
+  poweredByHeader: false,
   transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
   webpack: (config) => {
     config.module.rules.push({

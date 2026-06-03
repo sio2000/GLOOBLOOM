@@ -40,7 +40,7 @@ const FeedEntry = forwardRef<HTMLDivElement, { entry: ActivityEntry }>(function 
       initial={{ opacity: 0, x: 20, y: -5 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       className="flex items-start gap-2 py-1.5"
     >
       <span className="text-sm flex-shrink-0 mt-0.5">{icon}</span>
@@ -115,7 +115,7 @@ export function FeedCommentComposer({ compact = false }: { compact?: boolean }) 
 
   return (
     <div
-      className={`rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl pointer-events-auto select-text ${
+      className={`rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl max-sm:backdrop-blur-md pointer-events-auto select-text ${
         compact ? "px-2.5 py-2 space-y-1.5" : "px-3 py-2.5 border-t border-white/8 bg-black/25 space-y-2"
       }`}
       onPointerDown={(e) => e.stopPropagation()}
@@ -190,7 +190,7 @@ export function ActivityFeed({ layout = "floating" }: { layout?: "floating" | "d
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: layout === "dock" ? 0 : 1 }}
     >
-      <div className="rounded-2xl border border-white/5 bg-black/35 backdrop-blur-xl overflow-hidden pointer-events-auto">
+      <div className="rounded-2xl border border-white/5 bg-black/35 backdrop-blur-xl max-sm:backdrop-blur-md mobile-panel-surface overflow-hidden pointer-events-auto">
         <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between gap-2">
           <span className="text-[9px] uppercase tracking-widest text-white/25">Live Feed</span>
           {dockLayout ? (
@@ -232,7 +232,7 @@ export function ActivityFeed({ layout = "floating" }: { layout?: "floating" | "d
                 }`}
               >
                 <AnimatePresence initial={false}>
-                  {activities.slice(0, 20).map((entry) => (
+                  {activities.slice(0, isPhone ? 12 : 20).map((entry) => (
                     <FeedEntry key={entry.id} entry={entry} />
                   ))}
                 </AnimatePresence>

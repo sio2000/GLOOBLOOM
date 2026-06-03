@@ -49,7 +49,7 @@ export function WateringButton() {
         </AnimatePresence>
 
         <motion.div
-          className="absolute -inset-3 rounded-full"
+          className="absolute -inset-3 rounded-full max-sm:hidden"
           animate={{
             boxShadow: cooldown
               ? "0 0 0 0 transparent"

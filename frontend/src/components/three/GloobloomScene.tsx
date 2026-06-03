@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useRef, useMemo, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import {
   OrbitControls,
@@ -40,6 +40,7 @@ import { getStageColor, Season } from "@/types/organism";
 import { MAX_ECOSYSTEM_STAGE } from "@/lib/stageConstants";
 import { getScales, getCameraLimits } from "@/lib/plantScale";
 import { scaledCount } from "@/lib/performance";
+import { mobileStarCap } from "@/lib/mobilePerf";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 import { useScenePaused } from "@/hooks/useUiOverlayActive";
 import { MobileTouchPan } from "./MobileTouchPan";
@@ -117,10 +118,9 @@ function CameraRig({
   const viewOffsetY = useCameraStore((s) => s.viewOffsetY);
   const targetVec = useMemo(() => new THREE.Vector3(), []);
 
-  useFrame((_, delta) => {
+  useAdaptiveFrame((_, delta) => {
     const controls = controlsRef.current;
     if (!controls) return;
-
     const targetY = limits.targetY + viewOffsetY;
     targetVec.set(0, targetY, 0);
     controls.target.lerp(targetVec, Math.min(1, delta * 6));
@@ -191,17 +191,58 @@ function PerformanceController() {
 
   return (
     <PerformanceMonitor
-      flipflops={device.isMobile ? 2 : 4}
+      flipflops={device.isPhone ? 1 : device.isMobile ? 2 : 4}
       onDecline={degrade}
       onIncline={device.isMobile ? improve : undefined}
     />
   );
 }
 
-function SceneContent() {
-  const state          = useOrganismStore((s) => s.state);
-  const leaves         = useOrganismStore((s) => s.leaves);
+function LeafSystemBridge() {
+  const leaves = useOrganismStore((s) => s.leaves);
+  const stage = useOrganismStore((s) => s.state?.ecosystemStage ?? 1);
+  const growth = useOrganismStore((s) => s.state?.growth ?? 0);
+  return <LeafSystem leaves={leaves} stage={stage} growth={growth} />;
+}
+
+function MajorBranchBridge({
+  stage,
+  growth,
+  hydration,
+}: {
+  stage: number;
+  growth: number;
+  hydration: number;
+}) {
+  const leaves = useOrganismStore((s) => s.leaves);
+  return (
+    <MajorBranchSystem
+      stage={stage}
+      growth={growth}
+      hydration={hydration}
+      leaves={leaves}
+    />
+  );
+}
+
+function CreatureSystemBridge({ heightScale }: { heightScale: number }) {
+  const stage = useOrganismStore((s) => s.state?.ecosystemStage ?? 1);
+  const hydration = useOrganismStore((s) => s.state?.hydration ?? 0);
+  const growth = useOrganismStore((s) => s.state?.growth ?? 0);
   const activeCreatures = useOrganismStore((s) => s.activeCreatures);
+  return (
+    <CreatureSystem
+      stage={stage}
+      hydration={hydration}
+      activeCreatures={activeCreatures}
+      heightScale={heightScale}
+      growth={growth}
+    />
+  );
+}
+
+function SceneContent() {
+  const state = useOrganismStore((s) => s.state);
   const perf = usePerformanceStore((s) => s.settings());
   const device = useDeviceInfo();
 
@@ -214,7 +255,8 @@ function SceneContent() {
     isPortrait: device.isPortrait,
     isPhone: device.isPhone,
   });
-  const starBase = stage >= 20 ? Math.min(1000 + stage * 80, 8000) : 800;
+  const starBaseRaw = stage >= 20 ? Math.min(1000 + stage * 80, 8000) : 800;
+  const starBase = mobileStarCap(starBaseRaw, device.isPhone);
   const starCount = scaledCount(starBase, perf.starsMultiplier);
 
   return (
@@ -257,8 +299,8 @@ function SceneContent() {
         <OrganismCore hydration={hydration} growth={growth} decay={decay} stage={stage} />
         <BranchSystem stage={stage} growth={growth} hydration={hydration} decay={decay} />
         <FlowerSystem stage={stage} hydration={hydration} growth={growth} />
-        <LeafSystem leaves={leaves} stage={stage} growth={growth} />
-        <MajorBranchSystem stage={stage} growth={growth} hydration={hydration} leaves={leaves} />
+        <LeafSystemBridge />
+        <MajorBranchBridge stage={stage} growth={growth} hydration={hydration} />
         <GiantTrunkBranchSystem stage={stage} growth={growth} hydration={hydration} />
         <CrownBouquet stage={stage} hydration={hydration} growth={growth} />
         <ExtendedStageSystems stage={stage} growth={growth} hydration={hydration} />
@@ -266,13 +308,7 @@ function SceneContent() {
 
       <WateringFlameSystem stage={stage} growth={growth} />
       <ParticleField stage={stage} hydration={hydration} season={season} growth={growth} />
-      <CreatureSystem
-        stage={stage}
-        hydration={hydration}
-        activeCreatures={activeCreatures}
-        heightScale={heightScale}
-        growth={growth}
-      />
+      <CreatureSystemBridge heightScale={heightScale} />
       <GiantFlyingInsects stage={stage} growth={growth} />
 
       <HighStageEffects stage={stage} growth={growth} />
@@ -315,9 +351,11 @@ export function GloobloomScene() {
         gl={{
           antialias: perf.antialias,
           alpha: false,
-          powerPreference: "high-performance",
+          powerPreference: device.isMobile ? "low-power" : "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.80,
+          stencil: false,
+          depth: true,
         }}
         scene={{ background: new THREE.Color(fogColor) }}
       >

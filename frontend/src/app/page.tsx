@@ -12,19 +12,44 @@ import { StatsPanel } from "@/components/ui/StatsPanel";
 import { OrganismActionButtons } from "@/components/ui/OrganismActionButtons";
 import { ActivityFeed } from "@/components/ui/ActivityFeed";
 import { MobileBottomDock } from "@/components/ui/MobileBottomDock";
-import { WaterModal } from "@/components/ui/WaterModal";
-import { LeafModal } from "@/components/ui/LeafModal";
-import { AdminPanel } from "@/components/ui/AdminPanel";
 import { NotificationToast } from "@/components/ui/NotificationToast";
 import { MobileTopUtilityBar } from "@/components/ui/MobileTopUtilityBar";
-import { DevPanel } from "@/components/ui/DevPanel";
 import { CameraControls } from "@/components/ui/CameraControls";
 import { AudioToggle } from "@/components/ui/AudioToggle";
 import { TitleSplash } from "@/components/ui/TitleSplash";
 import { PaymentReturnHandler } from "@/components/ui/PaymentReturnHandler";
-import { StripeCheckoutOverlay } from "@/components/ui/StripeCheckoutOverlay";
-import { PaymentCelebrationModal } from "@/components/ui/PaymentCelebrationModal";
 import { ADMIN_SECRET } from "@/lib/constants";
+
+const WaterModal = dynamic(
+  () => import("@/components/ui/WaterModal").then((m) => m.WaterModal),
+  { ssr: false }
+);
+const LeafModal = dynamic(
+  () => import("@/components/ui/LeafModal").then((m) => m.LeafModal),
+  { ssr: false }
+);
+const AdminPanel = dynamic(
+  () => import("@/components/ui/AdminPanel").then((m) => m.AdminPanel),
+  { ssr: false }
+);
+const DevPanel = dynamic(
+  () => import("@/components/ui/DevPanel").then((m) => m.DevPanel),
+  { ssr: false }
+);
+const StripeCheckoutOverlay = dynamic(
+  () =>
+    import("@/components/ui/StripeCheckoutOverlay").then(
+      (m) => m.StripeCheckoutOverlay
+    ),
+  { ssr: false }
+);
+const PaymentCelebrationModal = dynamic(
+  () =>
+    import("@/components/ui/PaymentCelebrationModal").then(
+      (m) => m.PaymentCelebrationModal
+    ),
+  { ssr: false }
+);
 
 const GloobloomScene = dynamic(
   () =>
@@ -97,7 +122,7 @@ function GloobloomApp() {
       </div>
 
       {/* UI overlay — interactive controls only */}
-      <div className="absolute inset-0 pointer-events-none z-20">
+      <div className="absolute inset-0 pointer-events-none z-20 max-sm:[contain:strict]">
         <div className="pointer-events-auto">
           <StatsPanel />
         </div>

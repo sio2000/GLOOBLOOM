@@ -44,7 +44,7 @@ export function StatsPanel() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.8 }}
       >
-        <div className="rounded-2xl border border-white/5 bg-black/55 backdrop-blur-xl p-4 max-sm:p-3 max-sm:space-y-0 space-y-4">
+        <div className="rounded-2xl border border-white/5 bg-black/55 backdrop-blur-xl max-sm:backdrop-blur-md mobile-panel-surface p-4 max-sm:p-3 max-sm:space-y-0 space-y-4">
           {/* Mobile — always-visible summary + collapsible details */}
           <div className="sm:hidden">
             <div className="min-w-0">
@@ -59,8 +59,9 @@ export function StatsPanel() {
                 <MiniBar label="Growth" value={state.growth} color="#4ade80" icon="🌱" />
               </div>
               <div className="mt-2 flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 max-sm:animate-pulse sm:hidden" />
                 <motion.div
-                  className="w-1.5 h-1.5 rounded-full bg-green-400"
+                  className="w-1.5 h-1.5 rounded-full bg-green-400 hidden sm:block"
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 />

@@ -6,6 +6,9 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { LeafData } from "@/types/organism";
 import { filterTrunkLeaves } from "@/lib/majorBranches";
+import { getMaxNamedLeaves } from "@/lib/mobilePerf";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 
 interface Props {
   leaves: LeafData[];
@@ -26,7 +29,7 @@ function makeLeafGeo(w = 0.09, h = 0.24): THREE.ShapeGeometry {
 const LEAF_GEO = makeLeafGeo();
 const VEIN_GEO = new THREE.CapsuleGeometry(0.004, 0.18, 3, 6);
 
-function NameLeaf({ leaf }: { leaf: LeafData }) {
+function NameLeaf({ leaf, showLabel = true }: { leaf: LeafData; showLabel?: boolean }) {
   const grpRef = useRef<THREE.Group>(null);
   const phase = useMemo(() => (leaf.posX * 3.1 + leaf.posZ * 5.7) % (Math.PI * 2), [leaf.posX, leaf.posZ]);
 
@@ -87,37 +90,42 @@ function NameLeaf({ leaf }: { leaf: LeafData }) {
         <meshStandardMaterial color="#1a4010" roughness={0.9} />
       </mesh>
 
-      {/* Username engraved on leaf — black text, white outline for legibility on green */}
-      <group position={[0, leafH * 0.48, 0.012 * ls]} rotation={[0, 0, 0]}>
-        <Text
-          fontSize={fontSize}
-          color="#0a0a0a"
-          anchorX="center"
-          anchorY="middle"
-          maxWidth={0.16 * ls}
-          textAlign="center"
-          renderOrder={10}
-          outlineWidth={fontSize * 0.14}
-          outlineColor="#ffffff"
-          outlineOpacity={0.95}
-          fontWeight={700}
-          characters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-. "
-        >
-          {displayName}
-        </Text>
-      </group>
+      {showLabel && (
+        <group position={[0, leafH * 0.48, 0.012 * ls]} rotation={[0, 0, 0]}>
+          <Text
+            fontSize={fontSize}
+            color="#0a0a0a"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={0.16 * ls}
+            textAlign="center"
+            renderOrder={10}
+            outlineWidth={fontSize * 0.14}
+            outlineColor="#ffffff"
+            outlineOpacity={0.95}
+            fontWeight={700}
+            characters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-. "
+          >
+            {displayName}
+          </Text>
+        </group>
+      )}
     </group>
   );
 }
 
 export function LeafSystem({ leaves, stage = 1, growth = 0 }: Props) {
+  const tier = usePerformanceStore((s) => s.tier);
+  const device = useDeviceInfo();
   const trunkLeaves = filterTrunkLeaves(leaves, stage, growth);
   if (!trunkLeaves.length) return null;
 
+  const labelCap = getMaxNamedLeaves(tier, device.isPhone);
+
   return (
     <group>
-      {trunkLeaves.slice(0, 100).map((leaf) => (
-        <NameLeaf key={leaf.id} leaf={leaf} />
+      {trunkLeaves.slice(0, 100).map((leaf, index) => (
+        <NameLeaf key={leaf.id} leaf={leaf} showLabel={index < labelCap} />
       ))}
     </group>
   );
