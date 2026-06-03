@@ -16,6 +16,8 @@ import { RootFeatherSystem } from "./RootFeatherSystem";
 import { WateringFlameSystem } from "./WateringFlameSystem";
 import { StaticRootAmbience } from "./StaticRootAmbience";
 import { GiantFlyingInsects } from "./GiantFlyingInsects";
+import { MobileFlyingInsects } from "./MobileFlyingInsects";
+import { MobileTrunkClimbers } from "./MobileTrunkClimbers";
 import { HighStageEffects } from "./HighStageEffects";
 import { SceneVisibilityGate } from "./SceneVisibilityGate";
 import { useOrganismStore } from "@/store/useOrganismStore";
@@ -47,6 +49,7 @@ export function LazyWorldContent({
   leaves,
 }: Props) {
   const perf = usePerformanceStore((s) => s.settings());
+  const tier = usePerformanceStore((s) => s.tier);
   const worldPhase = usePerformanceStore((s) => s.worldPhase);
   const activeCreatures = useOrganismStore((s) => s.activeCreatures);
 
@@ -65,7 +68,7 @@ export function LazyWorldContent({
         </SceneVisibilityGate>
       )}
 
-      {perf.enableRootDecor && phaseOk(2) && (
+      {perf.enableRootDecor && !perf.mobileStatic && phaseOk(2) && (
         <SceneVisibilityGate worldY={-1}>
           <RootMushroomSystem
             stage={stage}
@@ -84,7 +87,13 @@ export function LazyWorldContent({
 
       <group position={[0, -0.3, 0]} scale={[widthScale, heightScale, widthScale]}>
         {perf.enableRootDecor && perf.mobileStatic && phaseOk(1) && (
-          <StaticRootAmbience stage={stage} growth={growth} decay={decay} />
+          <StaticRootAmbience
+            stage={stage}
+            growth={growth}
+            decay={decay}
+            hydration={hydration}
+            minimalFlame
+          />
         )}
         <OrganismCore
           hydration={hydration}
@@ -112,6 +121,9 @@ export function LazyWorldContent({
           hydration={hydration}
         />
         <CrownBouquet stage={stage} hydration={hydration} growth={growth} />
+        {perf.mobileStatic && phaseOk(1) && (
+          <MobileTrunkClimbers stage={stage} growth={growth} />
+        )}
         {perf.enableExtendedStage && phaseOk(2) && (
           <ExtendedStageSystems
             stage={stage}
@@ -147,7 +159,11 @@ export function LazyWorldContent({
       )}
 
       {perf.enableGiantInsects && phaseOk(2) && (
-        <GiantFlyingInsects stage={stage} growth={growth} />
+        perf.mobileStatic ? (
+          <MobileFlyingInsects stage={stage} growth={growth} tier={tier} />
+        ) : (
+          <GiantFlyingInsects stage={stage} growth={growth} />
+        )
       )}
 
       {perf.enableHighStageFx && phaseOk(3) && (

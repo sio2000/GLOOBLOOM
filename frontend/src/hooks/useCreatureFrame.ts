@@ -31,9 +31,10 @@ export function useCreatureFrame(
 
   useFrame((state, delta) => {
     if (!shouldRunCreatureFrames()) return;
-    const { creatureFrameSkip, enableCreatures } =
+    const { creatureFrameSkip, enableCreatures, enableGiantInsects } =
       usePerformanceStore.getState().settings();
-    if (!enableCreatures || creatureFrameSkip >= 999) return;
+    if (!enableCreatures && !enableGiantInsects) return;
+    if (creatureFrameSkip >= 999) return;
 
     const frameSkip = creatureFrameSkip;
     accumDelta.current += delta;

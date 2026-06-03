@@ -3,8 +3,8 @@
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
 
-const MOBILE_RENDER_MIN_MS = 90;
-const MOBILE_INTERACT_RENDER_MIN_MS = 120;
+const MOBILE_RENDER_MIN_MS = 100;
+const MOBILE_INTERACT_RENDER_MIN_MS = 150;
 let lastMobileRenderMs = 0;
 let mobileRenderTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -39,9 +39,10 @@ export function shouldRunCreatureFrames(): boolean {
   if (rt.uiInteracting) return false;
   if (rt.isCameraInteracting) return false;
 
-  const { enableCreatures, creatureFrameSkip } =
+  const { enableCreatures, enableGiantInsects, creatureFrameSkip } =
     usePerformanceStore.getState().settings();
-  if (!enableCreatures || creatureFrameSkip >= 999) return false;
+  if (!enableCreatures && !enableGiantInsects) return false;
+  if (creatureFrameSkip >= 999) return false;
 
   return true;
 }

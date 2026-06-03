@@ -4,7 +4,11 @@ import { useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import { getTrunkMetrics } from "@/lib/plantScale";
-import { computeNaturalTrunkWalk, trunkRadiusAt } from "@/lib/trunkWalker";
+import {
+  computeMobileTrunkWalk,
+  computeNaturalTrunkWalk,
+  trunkRadiusAt,
+} from "@/lib/trunkWalker";
 import {
   BUTTERFLY_LANES,
   LADYBUG_LANES,
@@ -29,29 +33,38 @@ type ClimberProps = {
   speed: number;
   scale: number;
   seed: number;
+  mobileCrawl?: boolean;
 };
 
 function useTrunkWalk(props: ClimberProps) {
-  const { yMin, yMax, angle, trunkR, trunk, speed, seed, scale } = props;
+  const { yMin, yMax, angle, trunkR, trunk, speed, seed, scale, mobileCrawl } = props;
   const ref = useRef<THREE.Group>(null);
   const bodyRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const phase = seeded(seed, 0) * 0.85;
   const surfaceOffset = 0.014 * scale;
+  const ySmooth = useRef((yMin + yMax) * 0.5);
 
   useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
-    const walk = computeNaturalTrunkWalk(clock.elapsedTime, speed, phase, yMin, yMax);
+    const walk = mobileCrawl
+      ? computeMobileTrunkWalk(clock.elapsedTime, speed, phase, yMin, yMax)
+      : computeNaturalTrunkWalk(clock.elapsedTime, speed, phase, yMin, yMax);
 
-    const stepWobble = Math.sin(walk.stepPhase) * 0.008;
+    const y =
+      mobileCrawl
+        ? (ySmooth.current = THREE.MathUtils.lerp(ySmooth.current, walk.y, 0.42))
+        : walk.y;
+
+    const stepWobble = Math.sin(walk.stepPhase) * (mobileCrawl ? 0.012 : 0.008);
     const wobbleA = angle + stepWobble;
     const radius = trunk
-      ? trunkRadiusAt(trunk, walk.y, surfaceOffset)
+      ? trunkRadiusAt(trunk, y, surfaceOffset)
       : trunkR + surfaceOffset;
 
     ref.current.position.set(
       Math.cos(wobbleA) * radius,
-      walk.y,
+      y,
       Math.sin(wobbleA) * radius
     );
     ref.current.rotation.y = wobbleA + Math.PI / 2;

@@ -95,9 +95,8 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
   ultra_low: {
     ...BASE,
     tier: "ultra_low",
-    dpr: [0.42, 0.52],
+    dpr: [0.38, 0.48],
     frameSkip: 999,
-    creatureFrameSkip: 3,
     creatureMultiplier: 0.58,
     insectMultiplier: 0.48,
     pollenMultiplier: 0.1,
@@ -114,14 +113,15 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     enableParticles: false,
     enableAtmosphere: false,
     enableHighStageFx: false,
-    enableGiantInsects: false,
+    enableGiantInsects: true,
     enableStars: true,
     enableExtendedStage: false,
     enableRootDecor: true,
     enableWateringFlames: false,
     shadows: false,
     shadowMapSize: 0,
-    maxStarCount: 220,
+    maxStarCount: 128,
+    creatureFrameSkip: 6,
     labelsMax: 0,
     drawDistanceScale: 1,
     lazyWorldMaxPhase: 3,
@@ -131,7 +131,6 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     tier: "low",
     dpr: [0.5, 0.62],
     frameSkip: 999,
-    creatureFrameSkip: 2,
     creatureMultiplier: 0.72,
     insectMultiplier: 0.55,
     animTimeScale: 0,
@@ -147,12 +146,14 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     enableAtmosphere: false,
     enablePostProcessing: false,
     enableHighStageFx: false,
-    enableGiantInsects: false,
+    enableGiantInsects: true,
     enableRootDecor: true,
     enableExtendedStage: false,
     shadows: false,
     shadowMapSize: 0,
-    maxStarCount: 500,
+    maxStarCount: 168,
+    enableStars: true,
+    creatureFrameSkip: 5,
     labelsMax: 0,
     enableCreatures: false,
     drawDistanceScale: 1,
@@ -233,8 +234,8 @@ export function detectStartupTier(profile?: DeviceProfile): QualityTier {
   if (p.saveData || p.lowEnd || p.gpuTier === 0) return "ultra_low";
   if (p.deviceClass === "phone") return "ultra_low";
   if (p.deviceClass === "tablet") {
-    if (p.memoryGb < 6 || p.cores <= 6) return "low";
-    return "medium";
+    if (p.memoryGb < 6 || p.cores <= 6) return "ultra_low";
+    return "low";
   }
 
   if (p.score >= 95 && p.memoryGb >= 16 && p.cores >= 12 && p.gpuTier >= 3)
@@ -249,7 +250,7 @@ export function detectStartupTier(profile?: DeviceProfile): QualityTier {
 export function detectDeviceMaxTier(profile?: DeviceProfile): QualityTier {
   const p = profile ?? detectDeviceProfile();
   if (p.deviceClass === "phone") return "low";
-  if (p.deviceClass === "tablet") return p.lowEnd ? "medium" : "high";
+  if (p.deviceClass === "tablet") return "low";
   if (p.gpuTier <= 1 && p.memoryGb < 8) return "medium";
   if (p.gpuTier >= 3 && p.memoryGb >= 16 && p.cores >= 12) return "ultra";
   if (p.gpuTier >= 2 && p.memoryGb >= 8) return "high";

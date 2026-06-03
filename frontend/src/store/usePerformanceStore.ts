@@ -89,7 +89,8 @@ function buildSettings(
       enableGiantInsects: relief >= 0.45 ? s.enableGiantInsects : false,
     };
   }
-  if (isMobile && tierIndex(s.tier) <= tierIndex("low")) {
+  if (isMobile) {
+    const ultra = tierIndex(s.tier) <= tierIndex("ultra_low");
     s = {
       ...s,
       demandMode: true,
@@ -100,12 +101,20 @@ function buildSettings(
       enableAtmosphere: false,
       enableHighStageFx: false,
       enableWateringFlames: false,
+      enableExtendedStage: false,
       shadows: false,
       shadowMapSize: 0,
       labelsMax: 0,
-      enableGiantInsects: false,
-      creatureFrameSkip: 999,
       enableCreatures: false,
+      enableGiantInsects: true,
+      insectMultiplier: 0.08,
+      creatureFrameSkip: ultra ? 5 : 4,
+      creatureMultiplier: 0,
+      enableStars: true,
+      maxStarCount: Math.min(s.maxStarCount, ultra ? 128 : 168),
+      geoQuality: Math.min(s.geoQuality, ultra ? 0.3 : 0.36),
+      lazyWorldMaxPhase: 2,
+      enablePostProcessing: false,
     };
   }
   return s;

@@ -17,8 +17,10 @@ export function AdaptivePerformanceMonitor() {
   const memTick = useRef(0);
   const renderStart = useRef(0);
 
+  const isMobile = usePerformanceStore((s) => s.isMobile);
+
   useFrame((_, delta) => {
-    if (sceneFrozen || isCameraInteracting()) return;
+    if (sceneFrozen || isCameraInteracting() || isMobile) return;
     const renderMs = renderStart.current
       ? performance.now() - renderStart.current
       : delta * 1000;

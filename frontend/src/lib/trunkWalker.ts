@@ -29,12 +29,14 @@ function cycleProgress(elapsed: number, speed: number, phase: number): number {
   return ((elapsed * speed * 0.045) + phase) % 1;
 }
 
-function steppedInch(tri: number): number {
+const DEFAULT_TRUNK_PAUSE = 0.52;
+const MOBILE_TRUNK_PAUSE = 0.34;
+
+function steppedInch(tri: number, pauseRatio = DEFAULT_TRUNK_PAUSE): number {
   const steps = 14;
   const raw = tri * steps;
   const stepIndex = Math.floor(raw);
   const stepFrac = raw - stepIndex;
-  const pauseRatio = 0.52;
   const moveRatio = 1 - pauseRatio;
   return (
     stepIndex / steps +
@@ -42,13 +44,15 @@ function steppedInch(tri: number): number {
   );
 }
 
-function inchProgress(cycle: number): { tri: number; direction: 1 | -1; moveAmount: number } {
+function inchProgress(
+  cycle: number,
+  pauseRatio = DEFAULT_TRUNK_PAUSE
+): { tri: number; direction: 1 | -1; moveAmount: number } {
   const tri = cycle < 0.5 ? cycle * 2 : 2 - cycle * 2;
   const direction: 1 | -1 = cycle < 0.5 ? 1 : -1;
   const steps = 14;
   const raw = tri * steps;
   const stepFrac = raw - Math.floor(raw);
-  const pauseRatio = 0.52;
   const moveRatio = 1 - pauseRatio;
   const moveAmount =
     stepFrac > pauseRatio ? smoothstep((stepFrac - pauseRatio) / moveRatio) : 0;
@@ -69,6 +73,33 @@ export function computeNaturalTrunkWalk(
   const span = yMax - yMin;
   const y = yMin + inch * span;
   const stepPhase = elapsed * 4.8 + phase * 9;
+
+  return {
+    y,
+    direction,
+    stepPhase,
+    moveAmount,
+    posture: 0,
+  };
+}
+
+/** Continuous smooth crawl — no stepped teleports between Y positions. */
+export function computeMobileTrunkWalk(
+  elapsed: number,
+  speed: number,
+  phase: number,
+  yMin: number,
+  yMax: number
+): TrunkWalkState {
+  const cycle = ((elapsed * speed * 0.078) + phase) % 1;
+  const direction: 1 | -1 = cycle < 0.5 ? 1 : -1;
+  const span = yMax - yMin;
+  const t = cycle < 0.5 ? cycle * 2 : (cycle - 0.5) * 2;
+  const inch = smoothstep(t);
+  const y = direction === 1 ? yMin + inch * span : yMax - inch * span;
+  const legDrive = Math.sin(elapsed * speed * 9.5 + phase * 11);
+  const moveAmount = 0.35 + Math.abs(legDrive) * 0.65;
+  const stepPhase = elapsed * 6.8 + phase * 9;
 
   return {
     y,

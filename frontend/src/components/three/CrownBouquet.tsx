@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { LilyFlower, RoseFlower, TulipFlower } from "./bouquet/ExtendedFlowers";
 import { MAX_ECOSYSTEM_STAGE, extendedHeightDamping, getVisualStageForSizing, LEGACY_MAX_STAGE } from "@/lib/stageConstants";
 import { getTrunkMetrics } from "@/lib/plantScale";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
 
 interface Props {
   stage: number;
@@ -168,6 +169,7 @@ function legacyBouquetBase(stage: number): number {
 }
 
 export function CrownBouquet({ stage, growth, hydration }: Props) {
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
   const rootRef = useRef<THREE.Group>(null);
   const budRef = useRef<THREE.Group>(null);
   const bouquetRef = useRef<THREE.Group>(null);
@@ -311,6 +313,7 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
   }, [stage, visualStage, bouquetScale]);
 
   useAdaptiveFrame(({ clock }) => {
+    if (mobileStatic) return;
     const t = clock.elapsedTime;
     if (rootRef.current) {
       rootRef.current.rotation.y = Math.sin(t * 0.12) * 0.08 * openT;
@@ -352,7 +355,8 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
       {/* Giant unfolding bouquet */}
       <group ref={bouquetRef} position={[0, 0.28 * bouquetScale, 0]}>
         {/* Greenery wrap at base */}
-        {wrapLeaves.map((l) => (
+        {!mobileStatic &&
+          wrapLeaves.map((l) => (
           <mesh
             key={l.id}
             position={[Math.cos(l.angle) * l.radius, l.height, Math.sin(l.angle) * l.radius]}
@@ -362,9 +366,10 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
             <coneGeometry args={[0.06, 0.22, 5]} />
             <meshStandardMaterial color="#2d9220" emissive="#1a6010" emissiveIntensity={0.12} side={THREE.DoubleSide} />
           </mesh>
-        ))}
+          ))}
 
-        {flowers.map((f) => (
+        {!mobileStatic &&
+          flowers.map((f) => (
           <BouquetFlower
             key={f.id}
             angle={f.angle}
@@ -378,9 +383,10 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
             hydration={hydration}
             variant={f.variant}
           />
-        ))}
+          ))}
 
-        {fillerFlowers.map((f) => (
+        {!mobileStatic &&
+          fillerFlowers.map((f) => (
           <BouquetFlower
             key={`fill-${f.id}`}
             angle={f.angle}
@@ -394,17 +400,20 @@ export function CrownBouquet({ stage, growth, hydration }: Props) {
             hydration={hydration}
             variant={f.variant}
           />
-        ))}
+          ))}
 
-        {roses.map((r) => (
+        {!mobileStatic &&
+          roses.map((r) => (
           <RoseFlower key={`rose-${r.id}`} {...r} openT={openT} hydration={hydration} />
-        ))}
-        {tulips.map((t) => (
+          ))}
+        {!mobileStatic &&
+          tulips.map((t) => (
           <TulipFlower key={`tulip-${t.id}`} {...t} openT={openT} hydration={hydration} />
-        ))}
-        {lilies.map((l) => (
+          ))}
+        {!mobileStatic &&
+          lilies.map((l) => (
           <LilyFlower key={`lily-${l.id}`} {...l} openT={openT} hydration={hydration} />
-        ))}
+          ))}
 
         {/* Central hero flower — largest at stage 90+ */}
         {stage >= 70 && (

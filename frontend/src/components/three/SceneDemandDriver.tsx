@@ -39,11 +39,19 @@ export function SceneDemandDriver() {
 
     if (mobileStatic) {
       if (idleCreatureRef.current) clearInterval(idleCreatureRef.current);
-      const enableCreatures =
-        usePerformanceStore.getState().settings().enableCreatures;
-      if (enableCreatures) {
-        const ms =
-          usePerformanceStore.getState().tier === "ultra_low" ? 6000 : 4500;
+      const { enableCreatures, enableGiantInsects } =
+        usePerformanceStore.getState().settings();
+      if (enableCreatures || enableGiantInsects) {
+        const { enableCreatures: creaturesOn, enableGiantInsects: insectsOn } =
+          usePerformanceStore.getState().settings();
+        const beesOnly = insectsOn && !creaturesOn;
+        const ms = beesOnly
+          ? usePerformanceStore.getState().tier === "ultra_low"
+            ? 1600
+            : 1300
+          : usePerformanceStore.getState().tier === "ultra_low"
+            ? 6000
+            : 4500;
         idleCreatureRef.current = setInterval(() => {
           if (useSceneRuntimeStore.getState().isCameraInteracting) return;
           if (!shouldRunCreatureFrames()) return;

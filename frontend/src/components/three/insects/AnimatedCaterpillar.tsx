@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import { getTrunkMetrics } from "@/lib/plantScale";
 import {
+  computeMobileTrunkWalk,
   computeNaturalTrunkWalk,
   computeTrunkWalkWithMidPause,
   trunkRadiusAt,
@@ -21,6 +22,7 @@ export function AnimatedCaterpillar({
   seed,
   speed = 0.26,
   midPause = false,
+  mobileCrawl = false,
 }: {
   trunk: ReturnType<typeof getTrunkMetrics>;
   yMin: number;
@@ -31,25 +33,34 @@ export function AnimatedCaterpillar({
   seed: number;
   speed?: number;
   midPause?: boolean;
+  mobileCrawl?: boolean;
 }) {
   const ref = useRef<THREE.Group>(null);
   const bodyRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const phase = (seed * 0.17) % 1;
   const surfaceOffset = 0.012 * scale;
+  const ySmooth = useRef((yMin + yMax) * 0.5);
 
   useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const elapsed = clock.elapsedTime;
-    const walk = midPause
-      ? computeTrunkWalkWithMidPause(elapsed, speed, phase, yMin, yMax)
-      : computeNaturalTrunkWalk(elapsed, speed, phase, yMin, yMax);
+    const walk = mobileCrawl
+      ? computeMobileTrunkWalk(elapsed, speed, phase, yMin, yMax)
+      : midPause
+        ? computeTrunkWalkWithMidPause(elapsed, speed, phase, yMin, yMax)
+        : computeNaturalTrunkWalk(elapsed, speed, phase, yMin, yMax);
 
-    const stepWobble = Math.sin(walk.stepPhase + pattern * 0.7) * 0.006;
+    const y =
+      mobileCrawl
+        ? (ySmooth.current = THREE.MathUtils.lerp(ySmooth.current, walk.y, 0.42))
+        : walk.y;
+
+    const stepWobble = Math.sin(walk.stepPhase + pattern * 0.7) * (mobileCrawl ? 0.01 : 0.006);
     const wobbleA = angle + stepWobble;
-    const radius = trunkRadiusAt(trunk, walk.y, surfaceOffset);
+    const radius = trunkRadiusAt(trunk, y, surfaceOffset);
 
-    ref.current.position.set(Math.cos(wobbleA) * radius, walk.y, Math.sin(wobbleA) * radius);
+    ref.current.position.set(Math.cos(wobbleA) * radius, y, Math.sin(wobbleA) * radius);
     ref.current.rotation.y = wobbleA + Math.PI / 2;
 
     if (orientRef.current) {

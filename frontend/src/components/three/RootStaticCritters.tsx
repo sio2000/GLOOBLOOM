@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { LadybugMesh } from "./insects/InsectMeshes";
 import { requestSceneRender } from "@/lib/sceneRuntime";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
 
 const SHUFFLE_MS = 5 * 60 * 1000;
 const MAX_CRITTERS = 3;
@@ -110,7 +111,11 @@ export function RootStaticCritters({
   trunkRadius: number;
   stage: number;
 }) {
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
+
   const critters = useMemo(() => {
+    if (mobileStatic) return [];
+
     const count = Math.min(MAX_CRITTERS, stage >= 12 ? 3 : 2);
     const r = trunkRadius * 1.25 + 0.06;
     const items: {
@@ -142,7 +147,7 @@ export function RootStaticCritters({
     }
 
     return items;
-  }, [rootY, trunkRadius, stage]);
+  }, [rootY, trunkRadius, stage, mobileStatic]);
 
   return (
     <group>

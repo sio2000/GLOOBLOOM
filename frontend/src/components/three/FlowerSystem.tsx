@@ -4,6 +4,7 @@ import { useRef, useMemo } from "react";
 import { useAdaptiveFrame } from "@/hooks/useAdaptiveFrame";
 import * as THREE from "three";
 import { getTrunkMetrics } from "@/lib/plantScale";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
 
 interface Props {
   stage: number;
@@ -175,6 +176,8 @@ function Flower({
 }
 
 export function FlowerSystem({ stage, hydration, growth }: Props) {
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
+
   const flowers = useMemo(() => {
     if (stage < 3) return [];
     const count = stage >= 50
@@ -194,6 +197,8 @@ export function FlowerSystem({ stage, hydration, growth }: Props) {
     for (let i = 0; i < count; i++) {
       const onTrunk = i % 3 === 0;
       const palette = FLOWER_PALETTE[i % FLOWER_PALETTE.length]!;
+
+      if (mobileStatic && !onTrunk) continue;
 
       if (onTrunk) {
         const heightPos = 0.15 + ((i * 17) % 100) / 100 * 0.78;
@@ -237,7 +242,7 @@ export function FlowerSystem({ stage, hydration, growth }: Props) {
     }
 
     return items;
-  }, [stage, Math.floor(growth / 15)]);
+  }, [stage, Math.floor(growth / 15), mobileStatic]);
 
   if (stage < 3) return null;
 

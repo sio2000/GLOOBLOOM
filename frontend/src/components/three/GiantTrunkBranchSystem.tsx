@@ -13,6 +13,7 @@ import {
   getGiantBranchThickness,
   giantBranchCurvePoint,
 } from "@/lib/giantTrunkBranches";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
 
 interface Props {
   stage: number;
@@ -140,6 +141,7 @@ function GiantHorizontalBranch({
   hydration: number;
 }) {
   const grp = useRef<THREE.Group>(null);
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
   const visualStage = getVisualStageForSizing(stage);
   const progress = getGiantBranchProgress(stage, growth, def.unlockStage);
   const length = getGiantBranchLength(def, stage, growth, Math.max(0.04, progress));
@@ -301,13 +303,9 @@ function GiantHorizontalBranch({
           );
         })()}
 
-        {progress > 0.3 && (
-          <>
-            {stage >= def.unlockStage + 8 && (
-              <BranchBeetle branchLength={length} def={def} seed={def.id + 3} stage={stage} />
-            )}
-          </>
-        )}
+        {progress > 0.3 && !mobileStatic && stage >= def.unlockStage + 8 && (
+            <BranchBeetle branchLength={length} def={def} seed={def.id + 3} stage={stage} />
+          )}
     </group>
   );
 }

@@ -8,6 +8,7 @@ import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
 import { requestSceneRender } from "@/lib/sceneRuntime";
 import { RootStaticCritters } from "./RootStaticCritters";
+import { StaticRootMushroom } from "./StaticRootMushroom";
 
 const ROOT_FLAME_COLORS = [
   "#ff9020",
@@ -19,6 +20,9 @@ const ROOT_FLAME_COLORS = [
 ];
 
 const FLAME_SEGMENT_COLORS = ROOT_FLAME_COLORS;
+
+/** Root torch hue cycle — every few hours (no animation loop). */
+const FLAME_COLOR_INTERVAL_MS = 2.5 * 60 * 60 * 1000;
 
 function StaticGroundPlane({
   stage,
@@ -68,7 +72,9 @@ function RootEternalFlame({
   position: [number, number, number];
   scale: number;
 }) {
-  const [colorIndex, setColorIndex] = useState(0);
+  const [colorIndex, setColorIndex] = useState(() =>
+    Math.floor(Date.now() / FLAME_COLOR_INTERVAL_MS) % FLAME_SEGMENT_COLORS.length
+  );
   const coreMat = useMemo(() => new THREE.MeshStandardMaterial(), []);
   const glowMat = useMemo(
     () =>
@@ -85,7 +91,7 @@ function RootEternalFlame({
       setColorIndex((i) => (i + 1) % FLAME_SEGMENT_COLORS.length);
       requestSceneRender();
     };
-    const id = window.setInterval(tick, 7500);
+    const id = window.setInterval(tick, FLAME_COLOR_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, []);
 
@@ -102,23 +108,79 @@ function RootEternalFlame({
     requestSceneRender();
   }, [col, coreMat, glowMat]);
 
+  const outerCol = useMemo(() => col.clone().lerp(new THREE.Color("#ff6020"), 0.35), [col]);
+
   return (
     <group position={position} scale={scale}>
-      <pointLight color={color} intensity={2.2} distance={8} decay={1.6} />
-      <mesh material={glowMat}>
-        <sphereGeometry args={[0.18, 10, 10]} />
+      <pointLight color={color} intensity={2.2} distance={7} decay={1.6} />
+      {/* Ember base */}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.06, 0.14, 12]} />
+        <meshStandardMaterial
+          color="#3a1808"
+          emissive="#ff4010"
+          emissiveIntensity={0.55}
+          roughness={0.9}
+        />
       </mesh>
-      <mesh position={[0, 0.08, 0]} material={coreMat}>
-        <coneGeometry args={[0.1, 0.32, 10]} />
+      {/* Outer flame body */}
+      <mesh position={[0, 0.1, 0]} rotation={[0, 0.35, 0]}>
+        <coneGeometry args={[0.14, 0.42, 10]} />
+        <meshStandardMaterial
+          color={outerCol}
+          emissive={outerCol}
+          emissiveIntensity={0.75}
+          transparent
+          opacity={0.55}
+          depthWrite={false}
+        />
       </mesh>
-      <mesh position={[0, 0.2, 0]}>
-        <coneGeometry args={[0.055, 0.18, 8]} />
+      <mesh position={[0.03, 0.12, -0.02]} rotation={[0, -0.5, 0.08]}>
+        <coneGeometry args={[0.11, 0.36, 8]} />
+        <meshStandardMaterial
+          color={outerCol}
+          emissive={outerCol}
+          emissiveIntensity={0.65}
+          transparent
+          opacity={0.45}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[-0.025, 0.11, 0.02]} rotation={[0, 0.9, -0.06]}>
+        <coneGeometry args={[0.09, 0.3, 8]} />
+        <meshStandardMaterial
+          color={outerCol}
+          emissive={outerCol}
+          emissiveIntensity={0.6}
+          transparent
+          opacity={0.4}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh material={glowMat} position={[0, 0.09, 0]}>
+        <sphereGeometry args={[0.14, 10, 10]} />
+      </mesh>
+      <mesh position={[0, 0.1, 0]} material={coreMat}>
+        <coneGeometry args={[0.09, 0.34, 10]} />
+      </mesh>
+      <mesh position={[0, 0.24, 0]}>
+        <coneGeometry args={[0.045, 0.22, 8]} />
+        <meshStandardMaterial
+          color="#fff8e8"
+          emissive="#ffffff"
+          emissiveIntensity={1.8}
+          transparent
+          opacity={0.88}
+        />
+      </mesh>
+      <mesh position={[0, 0.34, 0]}>
+        <coneGeometry args={[0.022, 0.1, 6]} />
         <meshStandardMaterial
           color="#ffffff"
           emissive="#ffffff"
-          emissiveIntensity={1.6}
+          emissiveIntensity={2.2}
           transparent
-          opacity={0.82}
+          opacity={0.75}
         />
       </mesh>
     </group>
@@ -178,10 +240,15 @@ export function StaticRootAmbience({
   stage,
   growth,
   decay,
+  hydration = 100,
+  minimalFlame = false,
 }: {
   stage: number;
   growth: number;
   decay: number;
+  hydration?: number;
+  /** Mobile: single root torch only (no ring lights). */
+  minimalFlame?: boolean;
 }) {
   const trunk = useMemo(() => getTrunkMetrics(stage, growth), [stage, growth]);
   const rootY = trunk.trunkBaseY + 0.02;
@@ -194,7 +261,33 @@ export function StaticRootAmbience({
     [trunk.trunkRadiusBottom]
   );
 
+  const staticMushrooms = useMemo(() => {
+    if (!minimalFlame) return [];
+    const r = trunk.trunkRadiusBottom * 1.45 + 0.1;
+    return [
+      {
+        id: 0,
+        pos: [Math.cos(1.1) * r, rootY, Math.sin(1.1) * r] as [number, number, number],
+        angle: 1.1,
+        variant: 0,
+        scale: Math.max(1.15, trunk.trunkRadiusBottom * 18),
+      },
+      {
+        id: 1,
+        pos: [Math.cos(4.2) * (r + 0.06), rootY, Math.sin(4.2) * (r + 0.06)] as [
+          number,
+          number,
+          number,
+        ],
+        angle: 4.2,
+        variant: 2,
+        scale: Math.max(1.0, trunk.trunkRadiusBottom * 15),
+      },
+    ];
+  }, [minimalFlame, rootY, trunk.trunkRadiusBottom]);
+
   const ringFlames = useMemo(() => {
+    if (minimalFlame) return [];
     const count = stage >= 8 ? 4 : 2;
     const r = trunk.trunkRadiusBottom * 1.35 + 0.08;
     return Array.from({ length: count }, (_, i) => {
@@ -206,20 +299,36 @@ export function StaticRootAmbience({
         scale: ringScale * (0.75 + (i % 2) * 0.15),
       };
     });
-  }, [stage, rootY, trunk.trunkRadiusBottom, ringScale]);
+  }, [stage, rootY, trunk.trunkRadiusBottom, ringScale, minimalFlame]);
 
   return (
     <group>
       <StaticGroundPlane stage={stage} decay={decay} />
-      <RootEternalFlame position={[0, rootY, 0]} scale={flameScale} />
-      {ringFlames.map((f) => (
-        <StaticRootFlame key={f.id} position={f.pos} color={f.color} scale={f.scale} />
-      ))}
-      <RootStaticCritters
-        rootY={rootY}
-        trunkRadius={trunk.trunkRadiusBottom}
-        stage={stage}
+      <RootEternalFlame
+        position={[0, rootY, 0]}
+        scale={minimalFlame ? flameScale * 0.85 : flameScale}
       />
+      {staticMushrooms.map((m) => (
+        <StaticRootMushroom
+          key={m.id}
+          position={m.pos}
+          angle={m.angle}
+          variant={m.variant}
+          scale={m.scale}
+          hydration={hydration}
+        />
+      ))}
+      {!minimalFlame &&
+        ringFlames.map((f) => (
+          <StaticRootFlame key={f.id} position={f.pos} color={f.color} scale={f.scale} />
+        ))}
+      {!minimalFlame && (
+        <RootStaticCritters
+          rootY={rootY}
+          trunkRadius={trunk.trunkRadiusBottom}
+          stage={stage}
+        />
+      )}
     </group>
   );
 }

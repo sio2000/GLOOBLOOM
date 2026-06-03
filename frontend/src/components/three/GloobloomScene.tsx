@@ -29,6 +29,8 @@ import { MobileTouchPan } from "./MobileTouchPan";
 import { SceneDemandDriver } from "./SceneDemandDriver";
 import { AdaptivePerformanceMonitor } from "./AdaptivePerformanceMonitor";
 import { LazyWorldContent } from "./LazyWorldContent";
+import { StaticMobileStars } from "./StaticMobileStars";
+import { MOBILE_STATIC_STAR_CAP, mobileTierKey } from "@/lib/mobileInsectCaps";
 import {
   beginCameraInteraction,
   endCameraInteraction,
@@ -303,6 +305,7 @@ function SceneContent() {
   const state = useOrganismStore((s) => s.state);
   const leaves = useOrganismStore((s) => s.leaves);
   const perf = usePerformanceStore((s) => s.settings());
+  const tier = usePerformanceStore((s) => s.tier);
   const device = useDeviceInfo();
 
   if (!state) return null;
@@ -320,9 +323,12 @@ function SceneContent() {
       ? 1
       : Math.max(0.88, perf.drawDistanceScale);
   const fogFar = cameraLimits.fogFar * fogScale;
+  const mobileStarCap = perf.mobileStatic
+    ? MOBILE_STATIC_STAR_CAP[mobileTierKey(tier)]
+    : perf.maxStarCount;
   const starCount = perf.enableStars
     ? Math.min(
-        perf.maxStarCount,
+        mobileStarCap,
         scaledCount(perf.maxStarCount, perf.starsMultiplier)
       )
     : 0;
@@ -347,7 +353,10 @@ function SceneContent() {
         staticMode={perf.mobileStatic}
       />
 
-      {starCount > 0 && (
+      {starCount > 0 && perf.mobileStatic && (
+        <StaticMobileStars count={starCount} />
+      )}
+      {starCount > 0 && !perf.mobileStatic && (
         <Stars
           radius={220}
           depth={120}
@@ -355,7 +364,7 @@ function SceneContent() {
           factor={4.2}
           saturation={0.35}
           fade={false}
-          speed={perf.mobileStatic ? 0 : 0.25}
+          speed={0.25}
         />
       )}
 
