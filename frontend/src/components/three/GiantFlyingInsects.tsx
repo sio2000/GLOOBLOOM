@@ -10,6 +10,7 @@ import {
   type FlyPath,
 } from "@/lib/insectFlight";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { creatureAbundance } from "@/lib/performance";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 
 interface Props {
@@ -543,9 +544,13 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
   const flyProps = { plantHeight: bounds.worldHeight, centerY: bounds.centerY, stage, growth };
   const device = useDeviceInfo();
   const tier = usePerformanceStore((s) => s.tier);
+  const profile = usePerformanceStore((s) => s.profile);
   const insectMul = usePerformanceStore((s) => s.settings().insectMultiplier);
   const mobileLite = tier === "ultra_low" || tier === "low";
   const showExtras = !mobileLite && !device.isPhone && insectMul >= 0.65;
+  // Roomy desktops get extra swarm passes (same meshes, unique seeds/paths).
+  const abundance = creatureAbundance(profile, tier);
+  const swarmPasses = abundance >= 1.7 ? 2 : abundance >= 1.35 ? 1 : 0;
 
   const showGiant = (index: number) => {
     if (index === 0) return true;
@@ -579,6 +584,26 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
           </group>
         );
       })}
+      {/* Capable desktops: extra swarm passes over the full roster. */}
+      {showExtras &&
+        Array.from({ length: swarmPasses }).map((_, pass) =>
+          GIANT_INSECTS.map((insect, i) => {
+            if (stage < insect.unlockStage) return null;
+            const Insect = insect.Component;
+            const progress = Math.min(1, (stage - insect.unlockStage) / 8 + 0.5);
+            const startPath = START_PATHS[(i + pass * 3 + 2) % START_PATHS.length]!;
+            return (
+              <group key={`swarm_${pass}_${insect.id}`} scale={progress}>
+                <Insect
+                  seed={insect.id.length + i * 17 + pass * 211 + 600}
+                  scale={insectScale}
+                  path={startPath}
+                  {...flyProps}
+                />
+              </group>
+            );
+          })
+        )}
     </group>
   );
 }

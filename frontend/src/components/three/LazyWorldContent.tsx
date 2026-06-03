@@ -86,14 +86,16 @@ export function LazyWorldContent({
       )}
 
       <group position={[0, -0.3, 0]} scale={[widthScale, heightScale, widthScale]}>
-        {perf.enableRootDecor && perf.mobileStatic && phaseOk(1) && (
+        {/* Eternal root flame + ground glow. Full version (ring flames + root
+            critters) on desktop; a lighter single torch on mobile-static. */}
+        {perf.enableRootDecor && phaseOk(1) && (
           <StaticRootAmbience
             stage={stage}
             growth={growth}
             decay={decay}
             hydration={hydration}
             totalWaterings={totalWaterings}
-            minimalFlame
+            minimalFlame={perf.mobileStatic}
           />
         )}
         <OrganismCore

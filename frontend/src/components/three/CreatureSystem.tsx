@@ -14,7 +14,7 @@ import {
 } from "@/lib/plantFlightAvoidance";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { limitMobileSpeciesCount } from "@/lib/sceneBackground";
-import { scaledCount } from "@/lib/performance";
+import { scaledCount, creatureAbundance } from "@/lib/performance";
 import { scratchPosition } from "@/lib/creatureVisibility";
 
 interface Props {
@@ -753,10 +753,16 @@ export function CreatureSystem({ stage, hydration, activeCreatures, heightScale,
   const flightBounds = useMemo(() => buildPlantFlightBounds(s, growth), [s, growth]);
   const creatureMul = usePerformanceStore((st) => st.settings().creatureMultiplier);
   const tier = usePerformanceStore((st) => st.tier);
+  const profile = usePerformanceStore((st) => st.profile);
   const mobileLite = tier === "ultra_low" || tier === "low";
+  // Roomy desktops get a denser swarm (more per species + higher ceiling).
+  const abundance = creatureAbundance(profile, tier);
 
   const cap = (n: number, max: number) => {
-    let count = scaledCount(Math.min(n, max), creatureMul);
+    let count = scaledCount(
+      Math.min(Math.round(n * abundance), Math.round(max * abundance)),
+      creatureMul
+    );
     count = limitMobileSpeciesCount(count, mobileLite, 2);
     return count;
   };

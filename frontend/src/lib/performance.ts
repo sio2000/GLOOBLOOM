@@ -278,6 +278,27 @@ export function detectMinTier(profile?: DeviceProfile): QualityTier {
   return "low";
 }
 
+/**
+ * Extra insect/creature density for roomy desktops. Phones/tablets and weak
+ * machines stay at 1× (handled by tier); strong desktops with plenty of RAM
+ * get a livelier swarm since they can carry the draw calls.
+ */
+export function creatureAbundance(
+  profile: DeviceProfile | null,
+  tier: QualityTier
+): number {
+  if (!profile || profile.isMobile) return 1;
+  if (tier === "ultra") {
+    if (profile.memoryGb >= 16 && profile.cores >= 12) return 1.8;
+    return 1.45;
+  }
+  if (tier === "high") {
+    if (profile.memoryGb >= 16 && profile.cores >= 8) return 1.4;
+    return 1.2;
+  }
+  return 1;
+}
+
 /** Dynamic-scale floor so fine-grained scaling can't disable bloom/PP on
  *  machines whose tier floor implies they should keep the full look. */
 export function dynamicScaleFloor(minTier: QualityTier): number {
