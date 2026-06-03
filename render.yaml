@@ -8,8 +8,9 @@ services:
     region: frankfurt
     plan: free
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npm run build
-    startCommand: npx prisma db push --skip-generate && node dist/index.js
+    # NODE_ENV=production skips devDeps — prisma CLI lives in devDependencies
+    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma db push --skip-generate && npm run build
+    startCommand: node dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -21,7 +22,7 @@ services:
       - key: FRONTEND_URL
         value: https://aesthetic-sprite-583fdb.netlify.app
       - key: ADMIN_SECRET
-        generateValue: true
+        value: gloobloom-admin-secret-change-me
       - key: ADMIN_PANEL_PASSWORD
         sync: false
       - key: STRIPE_SECRET_KEY
