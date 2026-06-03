@@ -3,8 +3,8 @@ import type { FlyPath } from "@/lib/insectFlight";
 
 /** Hard caps — tuned for smooth demand-mode pan/zoom. */
 export const MOBILE_FLIGHT_CAP: Record<"ultra_low" | "low", number> = {
-  ultra_low: 4,
-  low: 5,
+  ultra_low: 5,
+  low: 6,
 };
 
 /** Max giant species (besides bees) per tier. */
@@ -15,8 +15,8 @@ export const MOBILE_GIANT_CAP: Record<"ultra_low" | "low", number> = {
 
 /** Always prefer two bees on mobile when stage allows — giants fill remaining slots. */
 export const MOBILE_BEE_CAP: Record<"ultra_low" | "low", number> = {
-  ultra_low: 2,
-  low: 2,
+  ultra_low: 3,
+  low: 3,
 };
 
 export const MOBILE_STATIC_STAR_CAP: Record<"ultra_low" | "low", number> = {
@@ -68,7 +68,14 @@ export function getMobileFlyingRoster(
     MOBILE_GIANT_CAP[key],
     Math.max(0, maxTotal - wantBees)
   );
-  const giants = unlocked.slice(-giantCap);
+  let giants = unlocked.slice(-giantCap);
+
+  if (stage >= 60 && giantCap > 0) {
+    const dragonfly = unlocked.find((g) => g.kind === "dragonfly");
+    if (dragonfly && !giants.some((g) => g.kind === "dragonfly")) {
+      giants = [...giants.slice(1), dragonfly].slice(-giantCap);
+    }
+  }
 
   const beeCount = Math.min(wantBees, Math.max(0, maxTotal - giants.length));
 

@@ -244,6 +244,15 @@ export function MobileFlyingInsects({ stage, growth, tier }: Props) {
           {...flyProps}
         />
       )}
+      {beeCount >= 3 && (
+        <LiteHoneyBee
+          seed={203}
+          scale={mobileInsectScale(stage, growth, 0.92)}
+          path="wave"
+          speed={0.46}
+          {...flyProps}
+        />
+      )}
       {giants.map((g) =>
         renderGiant(g, {
           ...flyProps,

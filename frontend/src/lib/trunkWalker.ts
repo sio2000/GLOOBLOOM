@@ -16,6 +16,18 @@ export function trunkRadiusAt(
   return r + surfaceOffset;
 }
 
+/** Anchor radius so caterpillar body sits outside bark (legs on surface, no penetration). */
+export function caterpillarTrunkRadius(
+  trunk: ReturnType<typeof getTrunkMetrics>,
+  y: number,
+  scale: number,
+  bodyLength: number
+): number {
+  const belly = 0.024 * scale;
+  const outwardHalf = bodyLength * 0.52 * scale;
+  return trunkRadiusAt(trunk, y, belly + outwardHalf + 0.004 * scale);
+}
+
 export type TrunkWalkState = {
   y: number;
   direction: 1 | -1;
