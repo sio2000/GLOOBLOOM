@@ -25,7 +25,9 @@ function detectGpuTier(): 0 | 1 | 2 | 3 {
       canvas.getContext("webgl2") ?? canvas.getContext("webgl");
     if (!gl) return 0;
     const dbg = gl.getExtension("WEBGL_debug_renderer_info");
-    if (!dbg) return 1;
+    // Renderer string is hidden (privacy). Assume a capable mid GPU rather than
+    // under-rating the machine — WebGL2 presence is a good "modern GPU" signal.
+    if (!dbg) return canvas.getContext("webgl2") ? 2 : 1;
     const renderer = (
       gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) as string
     ).toLowerCase();

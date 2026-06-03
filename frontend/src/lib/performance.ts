@@ -238,23 +238,58 @@ export function detectStartupTier(profile?: DeviceProfile): QualityTier {
     return "low";
   }
 
-  if (p.score >= 95 && p.memoryGb >= 16 && p.cores >= 12 && p.gpuTier >= 3)
+  // Desktops: start generously so capable machines show the full experience
+  // (flame, bloom, post-processing) immediately instead of climbing up to it.
+  if (p.score >= 80 && p.memoryGb >= 12 && p.cores >= 8 && p.gpuTier >= 3)
     return "ultra";
-  if (p.score >= 72 && p.memoryGb >= 8 && p.cores >= 8 && p.gpuTier >= 2)
-    return "high";
-  if (p.score >= 48 && p.memoryGb >= 6 && p.cores >= 6) return "medium";
-  if (p.score >= 28) return "low";
-  return "ultra_low";
+  if (p.memoryGb >= 8 && p.cores >= 8 && p.gpuTier >= 2) return "high";
+  if (p.memoryGb >= 8 && p.cores >= 8) return "high";
+  if (p.score >= 40 && p.memoryGb >= 6) return "medium";
+  if (p.score >= 28) return "medium";
+  return "low";
 }
 
 export function detectDeviceMaxTier(profile?: DeviceProfile): QualityTier {
   const p = profile ?? detectDeviceProfile();
   if (p.deviceClass === "phone") return "low";
   if (p.deviceClass === "tablet") return "low";
-  if (p.gpuTier <= 1 && p.memoryGb < 8) return "medium";
   if (p.gpuTier >= 3 && p.memoryGb >= 16 && p.cores >= 12) return "ultra";
   if (p.gpuTier >= 2 && p.memoryGb >= 8) return "high";
+  // Strong CPU/RAM desktop with a masked/unknown GPU — still allow high.
+  if (p.cores >= 8 && p.memoryGb >= 8) return "high";
+  if (p.gpuTier <= 1 && p.memoryGb < 8) return "medium";
   return "medium";
+}
+
+/**
+ * Lowest tier the runtime is allowed to drop to. Keeps the signature effects
+ * (watering flame, bloom, post-processing) alive on capable machines instead
+ * of letting a transient frame-rate dip strip them down to a static low tier.
+ */
+export function detectMinTier(profile?: DeviceProfile): QualityTier {
+  const p = profile ?? detectDeviceProfile();
+  if (p.saveData || p.lowEnd) return "ultra_low";
+  if (p.deviceClass === "phone") return "ultra_low";
+  if (p.deviceClass === "tablet") return "low";
+  // Desktop floors — never strip the hero visuals from a real GPU/CPU.
+  if (p.gpuTier >= 2 && p.memoryGb >= 8) return "high";
+  if (p.cores >= 8 && p.memoryGb >= 8) return "high";
+  if (p.cores >= 4 && p.memoryGb >= 6) return "medium";
+  return "low";
+}
+
+/** Dynamic-scale floor so fine-grained scaling can't disable bloom/PP on
+ *  machines whose tier floor implies they should keep the full look. */
+export function dynamicScaleFloor(minTier: QualityTier): number {
+  switch (minTier) {
+    case "ultra":
+    case "high":
+      return 0.72;
+    case "medium":
+      return 0.55;
+    default:
+      return 0.35;
+  }
 }
 
 export function getQualitySettings(tier: QualityTier): QualitySettings {

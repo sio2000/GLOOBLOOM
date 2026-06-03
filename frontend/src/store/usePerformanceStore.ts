@@ -9,7 +9,10 @@ import {
   applyDynamicScale,
   detectStartupTier,
   detectDeviceMaxTier,
+  detectMinTier,
+  dynamicScaleFloor,
   tierIndex,
+  TIER_ORDER,
 } from "@/lib/performance";
 import {
   type DeviceProfile,
@@ -39,9 +42,19 @@ export interface PerformanceMetrics {
   capTier: QualityTier;
 }
 
+/** Grace window after init — ignore degrades while shaders compile / assets
+ *  stream / the lazy world ramps up, so transient hitches don't strip quality. */
+const STARTUP_GRACE_MS = 7000;
+
+function raiseTierToFloor(tier: QualityTier, floor: QualityTier): QualityTier {
+  return TIER_ORDER[Math.max(tierIndex(tier), tierIndex(floor))]!;
+}
+
 interface PerformanceState {
   tier: QualityTier;
   capTier: QualityTier;
+  minTier: QualityTier;
+  graceUntil: number;
   profile: DeviceProfile | null;
   isMobile: boolean;
   demandMode: boolean;
@@ -127,27 +140,30 @@ function applyDegradeAction(
   state: PerformanceState
 ): Partial<PerformanceState> {
   const now = performance.now();
+  const floor = dynamicScaleFloor(state.minTier);
   switch (action) {
     case "force_ultra_low":
+      // Drop straight to the device floor (never below it) instead of always
+      // nuking to ultra_low — keeps flame/bloom on capable machines.
       return {
-        tier: "ultra_low",
-        dynamicScale: 0.4,
+        tier: state.minTier,
+        dynamicScale: Math.max(floor, 0.4),
         lastTierChangeAt: now,
       };
     case "tier_down":
       return {
-        tier: degradeTier(state.tier),
-        dynamicScale: Math.max(0.35, state.dynamicScale - 0.12),
+        tier: raiseTierToFloor(degradeTier(state.tier), state.minTier),
+        dynamicScale: Math.max(floor, state.dynamicScale - 0.12),
         lastTierChangeAt: now,
       };
     case "scale_geometry":
       return {
-        dynamicScale: Math.max(0.35, state.dynamicScale - 0.1),
+        dynamicScale: Math.max(floor, state.dynamicScale - 0.1),
         lastTierChangeAt: now,
       };
     case "scale_effects":
       return {
-        dynamicScale: Math.max(0.4, state.dynamicScale - 0.08),
+        dynamicScale: Math.max(floor, state.dynamicScale - 0.08),
         lastTierChangeAt: now,
       };
     default:
@@ -158,6 +174,8 @@ function applyDegradeAction(
 export const usePerformanceStore = create<PerformanceState>((set, get) => ({
   tier: "medium",
   capTier: "high",
+  minTier: "low",
+  graceUntil: 0,
   profile: null,
   isMobile: false,
   demandMode: false,
@@ -174,13 +192,19 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
     if (get().initialized) return;
     const profile = detectDeviceProfile();
     const capTier = detectDeviceMaxTier(profile);
-    const tier = clampTier(detectStartupTier(profile), capTier);
+    const minTier = clampTier(detectMinTier(profile), capTier);
+    const tier = raiseTierToFloor(
+      clampTier(detectStartupTier(profile), capTier),
+      minTier
+    );
     const vp = getDeviceViewport();
     const settings = getQualitySettings(tier);
 
     set({
       profile,
       capTier,
+      minTier,
+      graceUntil: performance.now() + STARTUP_GRACE_MS,
       tier,
       isMobile: vp.isMobile,
       demandMode: settings.demandMode,
@@ -205,7 +229,10 @@ export const usePerformanceStore = create<PerformanceState>((set, get) => ({
     fpsTracker.pushFrame(deltaSec, renderMs);
     const snap = fpsTracker.snapshot();
     const state = get();
-    const action = evaluateDegrade(snap);
+    // During the startup grace window, ride out load-time hitches (shader
+    // compile, asset streaming, lazy-world ramp) without degrading quality.
+    const inGrace = performance.now() < state.graceUntil;
+    const action = inGrace ? "none" : evaluateDegrade(snap);
     let patch: Partial<PerformanceState> = { metrics: snap };
 
     let relief = state.insectReliefScale;
