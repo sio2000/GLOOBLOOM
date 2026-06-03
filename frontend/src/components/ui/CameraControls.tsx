@@ -56,6 +56,27 @@ function ArrowButton({
   );
 }
 
+/** Mobile-only wrapper — shifts controls down when a panel is open. */
+export function MobileCameraControls() {
+  const statsExpanded = useOrganismStore((s) => s.mobileStatsExpanded);
+  const feedOpen = useOrganismStore((s) => s.mobileFeedOpen);
+  const loreOpen = useOrganismStore((s) => s.showLoreSheet);
+  const devOpen = useOrganismStore((s) => s.mobileDevOpen);
+  const panelOpen = statsExpanded || feedOpen || loreOpen || devOpen;
+
+  return (
+    <div
+      className={`sm:hidden fixed left-2 pointer-events-auto z-20 transition-[top,transform] duration-200 ${
+        panelOpen
+          ? "top-[max(8rem,env(safe-area-inset-top))] translate-y-0"
+          : "top-1/2 -translate-y-1/2"
+      }`}
+    >
+      <CameraControls />
+    </div>
+  );
+}
+
 export function CameraControls() {
   const stage = useOrganismStore((s) => s.state?.ecosystemStage ?? 1);
   const growth = useOrganismStore((s) => s.state?.growth ?? 0);

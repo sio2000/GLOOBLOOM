@@ -12,6 +12,7 @@ export function MobileBottomDock() {
   const mounted = useHasMounted();
   const overlayActive = useUiOverlayActive();
   const mobileFeedOpen = useOrganismStore((s) => s.mobileFeedOpen);
+  const mobileStatsExpanded = useOrganismStore((s) => s.mobileStatsExpanded);
   const openMobilePanel = useOrganismStore((s) => s.openMobilePanel);
   const toggleMobilePanel = useOrganismStore((s) => s.toggleMobilePanel);
 
@@ -19,7 +20,9 @@ export function MobileBottomDock() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-40 flex flex-col gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none sm:hidden"
+      className={`fixed inset-x-0 bottom-0 flex flex-col gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none sm:hidden ${
+        mobileStatsExpanded ? "z-25" : "z-40"
+      }`}
       aria-label="Actions"
     >
       <AnimatePresence initial={false}>

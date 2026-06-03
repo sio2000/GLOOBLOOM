@@ -10,11 +10,14 @@ export function isCreaturePositionVisible(
   position: THREE.Vector3,
   drawDistanceScale = 1
 ): boolean {
-  const maxDist = 38 * drawDistanceScale;
+  const tier = usePerformanceStore.getState().tier;
+  if (tier === "ultra_low" || tier === "low") return true;
+
+  const maxDist = 120 * Math.max(0.9, drawDistanceScale);
   if (camera.position.distanceToSquared(position) > maxDist * maxDist) {
     return false;
   }
-  return isWorldPointVisible(camera, position.y, 2.5, maxDist * 1.1);
+  return isWorldPointVisible(camera, position.y, 4, maxDist);
 }
 
 export type CreatureVisibilityCache = { last: boolean; tick: number };
@@ -25,9 +28,14 @@ export function checkCreatureVisible(
   seed: number,
   cache: CreatureVisibilityCache
 ): boolean {
-  cache.tick += 1;
   const tier = usePerformanceStore.getState().tier;
-  const interval = tier === "ultra_low" || tier === "low" ? 6 : 4;
+  if (tier === "ultra_low" || tier === "low") {
+    cache.last = true;
+    return true;
+  }
+
+  cache.tick += 1;
+  const interval = 4;
   if ((cache.tick + seed * 3) % interval !== 0) return cache.last;
 
   const scale = usePerformanceStore.getState().settings().drawDistanceScale;

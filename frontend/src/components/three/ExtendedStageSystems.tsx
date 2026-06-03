@@ -22,6 +22,7 @@ import { AnimatedCaterpillar } from "./insects/AnimatedCaterpillar";
 import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import { useThrottledFrame } from "@/hooks/useThrottledFrame";
 import { applyPlantAvoidance, buildPlantFlightBounds } from "@/lib/plantFlightAvoidance";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
 
 interface Props {
   stage: number;
@@ -247,6 +248,10 @@ function ExtendedFlyer({
 export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
   if (!isExtendedStage(stage)) return null;
 
+  const tier = usePerformanceStore((s) => s.tier);
+  const lite = tier === "ultra_low" || tier === "low";
+  const capN = (n: number, maxLite: number) => (lite ? Math.min(n, maxLite) : n);
+
   const colors = getStageColor(stage);
   const extMul = extendedScaleMultiplier(stage);
   const trunk = getTrunkMetrics(stage, growth);
@@ -257,7 +262,7 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
   const sizeBoost = Math.max(plantHeight * 0.055, trunkR * 16, 3.5);
 
   const lilies = useMemo(() => {
-    const count = Math.min(3 + Math.floor((stage - 101) / 18), 14);
+    const count = capN(Math.min(3 + Math.floor((stage - 101) / 18), 14), 4);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + seeded(i, 0) * 0.5,
@@ -265,10 +270,10 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
       scale: (0.85 + seeded(i, 2) * 0.5) * Math.min(extMul, 2.2) * sizeBoost * 0.35,
       seed: i + stage * 0.1,
     }));
-  }, [stage, trunkR, extMul, sizeBoost]);
+  }, [stage, trunkR, extMul, sizeBoost, lite]);
 
   const spiders = useMemo(() => {
-    const count = Math.min(3 + Math.floor((stage - 105) / 18), 12);
+    const count = capN(Math.min(3 + Math.floor((stage - 105) / 18), 12), 3);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: seeded(i + 50, 0) * Math.PI * 2,
@@ -276,10 +281,10 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
       scale: (2.5 + seeded(i + 50, 2) * 1.5) * sizeBoost * 0.22,
       seed: i * 1.7,
     }));
-  }, [stage, trunkR, sizeBoost]);
+  }, [stage, trunkR, sizeBoost, lite]);
 
   const satellites = useMemo(() => {
-    const count = Math.min(5 + Math.floor((stage - 101) / 12), 24);
+    const count = capN(Math.min(5 + Math.floor((stage - 101) / 12), 24), 6);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       angle: (i / count) * Math.PI * 2 + seeded(i + 200, 0),
@@ -287,7 +292,7 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
       scale: (0.7 + seeded(i + 200, 2) * 1.2) * Math.min(extMul * 0.45, 2),
       seed: i,
     }));
-  }, [stage, trunkR, extMul]);
+  }, [stage, trunkR, extMul, lite]);
 
   const caterpillars = useMemo(() => {
     const { trunkBaseY, trunkHeight } = trunk;
@@ -330,8 +335,8 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
         speed: crawlSpeed,
         midPause: true,
       },
-    ].slice(0, MAX_CATERPILLARS);
-  }, [trunk, sizeBoost]);
+    ].slice(0, lite ? 2 : MAX_CATERPILLARS);
+  }, [trunk, sizeBoost, lite]);
 
   const trunkBottomY = trunk.trunkBaseY;
   const trunkTopY = trunk.trunkTopY;
@@ -342,9 +347,9 @@ export function ExtendedStageSystems({ stage, growth, hydration }: Props) {
   );
 
   const flyers = useMemo(() => {
-    const count = Math.min(3 + Math.floor((stage - 101) / 18), 12);
+    const count = capN(Math.min(3 + Math.floor((stage - 101) / 18), 12), 3);
     return Array.from({ length: count }, (_, i) => i);
-  }, [stage]);
+  }, [stage, lite]);
 
   return (
     <group>

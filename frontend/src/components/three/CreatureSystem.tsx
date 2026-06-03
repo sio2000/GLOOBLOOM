@@ -755,8 +755,11 @@ export function CreatureSystem({ stage, hydration, activeCreatures, heightScale,
 
   const cap = (n: number, max: number) => {
     let count = scaledCount(Math.min(n, max), creatureMul);
-    if (tier === "ultra_low") count = Math.min(count, Math.max(1, Math.ceil(max * 0.35)));
-    else if (tier === "low") count = Math.min(count, Math.max(1, Math.ceil(max * 0.55)));
+    if (tier === "ultra_low") {
+      count = Math.min(count, Math.max(2, Math.ceil(max * 0.5)));
+    } else if (tier === "low") {
+      count = Math.min(count, Math.max(2, Math.ceil(max * 0.65)));
+    }
     return count;
   };
 

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 const _proj = new THREE.Vector3();
+const _focus = new THREE.Vector3();
 
 /** Distance + frustum gate for optional unmount / freeze. */
 export function isWorldPointVisible(
@@ -11,10 +12,11 @@ export function isWorldPointVisible(
 ): boolean {
   if (!(camera instanceof THREE.PerspectiveCamera)) return true;
 
-  const dist = Math.abs(camera.position.y - worldY);
+  _focus.set(0, worldY, 0);
+  const dist = camera.position.distanceTo(_focus);
   if (dist > maxDistance) return false;
 
-  _proj.set(0, worldY, 0).project(camera);
+  _proj.copy(_focus).project(camera);
   if (_proj.z < -1 || _proj.z > 1) return false;
   const margin = radius / Math.max(dist, 1);
   return (

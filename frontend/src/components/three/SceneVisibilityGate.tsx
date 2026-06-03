@@ -12,16 +12,21 @@ interface Props {
   radius?: number;
 }
 
-/** Unmounts subtree when far outside camera frustum — saves draw + updates. */
+/** Unmounts subtree when far outside camera frustum — skipped on mobile tiers. */
 export function SceneVisibilityGate({
   children,
   worldY = 0,
   radius = 14,
 }: Props) {
+  const tier = usePerformanceStore((s) => s.tier);
+  if (tier === "ultra_low" || tier === "low") {
+    return <>{children}</>;
+  }
+
   const camera = useThree((s) => s.camera);
   const drawScale = usePerformanceStore((s) => s.settings().drawDistanceScale);
   const [visible, setVisible] = useState(true);
-  const maxDist = 90 * drawScale;
+  const maxDist = 140 * drawScale;
 
   useFrame(() => {
     if (!shouldRunAnimationFrames()) return;

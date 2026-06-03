@@ -14,7 +14,7 @@ import { ActivityFeed } from "@/components/ui/ActivityFeed";
 import { MobileBottomDock } from "@/components/ui/MobileBottomDock";
 import { NotificationToast } from "@/components/ui/NotificationToast";
 import { MobileTopUtilityBar } from "@/components/ui/MobileTopUtilityBar";
-import { CameraControls } from "@/components/ui/CameraControls";
+import { CameraControls, MobileCameraControls } from "@/components/ui/CameraControls";
 import { AudioToggle } from "@/components/ui/AudioToggle";
 import { TitleSplash } from "@/components/ui/TitleSplash";
 import { PaymentReturnHandler } from "@/components/ui/PaymentReturnHandler";
@@ -168,9 +168,7 @@ function GloobloomApp() {
             <CameraControls />
           </div>
 
-          <div className="sm:hidden fixed left-2 z-30 pointer-events-auto top-1/2 -translate-y-1/2">
-            <CameraControls />
-          </div>
+          <MobileCameraControls />
 
           <MobileTopUtilityBar />
           <DevPanel />

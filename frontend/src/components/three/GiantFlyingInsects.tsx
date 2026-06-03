@@ -542,11 +542,14 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
   const insectScale = getInsectScale(stage, growth);
   const flyProps = { plantHeight: bounds.worldHeight, centerY: bounds.centerY, stage, growth };
   const device = useDeviceInfo();
+  const tier = usePerformanceStore((s) => s.tier);
   const insectMul = usePerformanceStore((s) => s.settings().insectMultiplier);
-  const showExtras = !device.isPhone && insectMul >= 0.65;
+  const mobileLite = tier === "ultra_low" || tier === "low";
+  const showExtras = !mobileLite && !device.isPhone && insectMul >= 0.65;
 
   const showGiant = (index: number) => {
     if (index === 0) return true;
+    if (mobileLite) return index < 4;
     if (device.isPhone) return index % 2 === 0;
     if (insectMul < 0.85) return index % 2 === 0;
     return true;

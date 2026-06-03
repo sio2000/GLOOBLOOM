@@ -108,7 +108,7 @@ export function LazyWorldContent({
           hydration={hydration}
         />
         <CrownBouquet stage={stage} hydration={hydration} growth={growth} />
-        {perf.enableExtendedStage && phaseOk(3) && (
+        {perf.enableExtendedStage && phaseOk(2) && (
           <ExtendedStageSystems
             stage={stage}
             growth={growth}
@@ -142,7 +142,7 @@ export function LazyWorldContent({
         />
       )}
 
-      {perf.enableGiantInsects && phaseOk(3) && (
+      {perf.enableGiantInsects && phaseOk(2) && (
         <GiantFlyingInsects stage={stage} growth={growth} />
       )}
 

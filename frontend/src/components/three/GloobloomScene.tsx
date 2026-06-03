@@ -255,7 +255,11 @@ function SceneContent() {
     isPortrait: device.isPortrait,
     isPhone: device.isPhone,
   });
-  const fogFar = cameraLimits.fogFar * perf.drawDistanceScale;
+  const fogScale =
+    perf.tier === "ultra_low" || perf.tier === "low"
+      ? 1
+      : Math.max(0.88, perf.drawDistanceScale);
+  const fogFar = cameraLimits.fogFar * fogScale;
   const starCount = perf.enableStars
     ? Math.min(
         perf.maxStarCount,
