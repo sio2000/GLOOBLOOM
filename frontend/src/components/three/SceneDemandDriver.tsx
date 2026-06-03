@@ -44,12 +44,13 @@ export function SceneDemandDriver() {
       if (enableCreatures || enableGiantInsects) {
         const { enableCreatures: creaturesOn, enableGiantInsects: insectsOn } =
           usePerformanceStore.getState().settings();
+        const tier = usePerformanceStore.getState().tier;
         const beesOnly = insectsOn && !creaturesOn;
         const ms = beesOnly
-          ? usePerformanceStore.getState().tier === "ultra_low"
-            ? 1500
-            : 1250
-          : usePerformanceStore.getState().tier === "ultra_low"
+          ? tier === "ultra_low"
+            ? 380
+            : 320
+          : tier === "ultra_low"
             ? 6000
             : 4500;
         idleCreatureRef.current = setInterval(() => {

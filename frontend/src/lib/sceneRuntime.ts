@@ -3,7 +3,7 @@
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
 
-const MOBILE_RENDER_MIN_MS = 100;
+const MOBILE_RENDER_MIN_MS = 72;
 const MOBILE_INTERACT_RENDER_MIN_MS = 150;
 let lastMobileRenderMs = 0;
 let mobileRenderTimer: ReturnType<typeof setTimeout> | null = null;

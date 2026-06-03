@@ -91,15 +91,15 @@ export function computeMobileTrunkWalk(
   yMin: number,
   yMax: number
 ): TrunkWalkState {
-  const cycle = ((elapsed * speed * 0.088) + phase) % 1;
+  const cycle = ((elapsed * speed * 0.12) + phase) % 1;
   const direction: 1 | -1 = cycle < 0.5 ? 1 : -1;
   const span = yMax - yMin;
   const t = cycle < 0.5 ? cycle * 2 : (cycle - 0.5) * 2;
   const inch = smoothstep(t);
   const y = direction === 1 ? yMin + inch * span : yMax - inch * span;
-  const legDrive = Math.sin(elapsed * speed * 9.5 + phase * 11);
-  const moveAmount = 0.35 + Math.abs(legDrive) * 0.65;
-  const stepPhase = elapsed * 6.8 + phase * 9;
+  const legDrive = Math.sin(elapsed * speed * 12 + phase * 11);
+  const moveAmount = 0.45 + Math.abs(legDrive) * 0.55;
+  const stepPhase = elapsed * 9.5 + phase * 9;
 
   return {
     y,

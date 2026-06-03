@@ -40,8 +40,6 @@ export function AnimatedCaterpillar({
   const orientRef = useRef<THREE.Group>(null);
   const phase = (seed * 0.17) % 1;
   const surfaceOffset = 0.012 * scale;
-  const ySmooth = useRef((yMin + yMax) * 0.5);
-
   useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const elapsed = clock.elapsedTime;
@@ -51,10 +49,7 @@ export function AnimatedCaterpillar({
         ? computeTrunkWalkWithMidPause(elapsed, speed, phase, yMin, yMax)
         : computeNaturalTrunkWalk(elapsed, speed, phase, yMin, yMax);
 
-    const y =
-      mobileCrawl
-        ? (ySmooth.current = THREE.MathUtils.lerp(ySmooth.current, walk.y, 0.42))
-        : walk.y;
+    const y = walk.y;
 
     const stepWobble = Math.sin(walk.stepPhase + pattern * 0.7) * (mobileCrawl ? 0.01 : 0.006);
     const wobbleA = angle + stepWobble;

@@ -41,11 +41,11 @@ export interface MobileStageGiant {
 
 /** One giant species per stage band (bee handled separately). */
 export const MOBILE_STAGE_GIANTS: MobileStageGiant[] = [
-  { kind: "mosquito", unlockStage: 24, path: "drift", speed: 0.48, seed: 24 },
-  { kind: "monarch", unlockStage: 36, path: "ellipse", speed: 0.44, seed: 36 },
-  { kind: "beetle", unlockStage: 48, path: "orbit", speed: 0.46, seed: 48 },
-  { kind: "dragonfly", unlockStage: 60, path: "wave", speed: 0.48, seed: 72 },
-  { kind: "firefly", unlockStage: 72, path: "drift", speed: 0.4, seed: 84 },
+  { kind: "mosquito", unlockStage: 24, path: "drift", speed: 0.58, seed: 24 },
+  { kind: "monarch", unlockStage: 36, path: "ellipse", speed: 0.54, seed: 36 },
+  { kind: "beetle", unlockStage: 48, path: "orbit", speed: 0.56, seed: 48 },
+  { kind: "dragonfly", unlockStage: 60, path: "wave", speed: 0.58, seed: 72 },
+  { kind: "firefly", unlockStage: 72, path: "drift", speed: 0.5, seed: 84 },
 ];
 
 export function mobileTierKey(

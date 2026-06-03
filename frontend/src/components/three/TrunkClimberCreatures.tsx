@@ -43,18 +43,13 @@ function useTrunkWalk(props: ClimberProps) {
   const orientRef = useRef<THREE.Group>(null);
   const phase = seeded(seed, 0) * 0.85;
   const surfaceOffset = 0.014 * scale;
-  const ySmooth = useRef((yMin + yMax) * 0.5);
-
   useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const walk = mobileCrawl
       ? computeMobileTrunkWalk(clock.elapsedTime, speed, phase, yMin, yMax)
       : computeNaturalTrunkWalk(clock.elapsedTime, speed, phase, yMin, yMax);
 
-    const y =
-      mobileCrawl
-        ? (ySmooth.current = THREE.MathUtils.lerp(ySmooth.current, walk.y, 0.42))
-        : walk.y;
+    const y = walk.y;
 
     const stepWobble = Math.sin(walk.stepPhase) * (mobileCrawl ? 0.012 : 0.008);
     const wobbleA = angle + stepWobble;
