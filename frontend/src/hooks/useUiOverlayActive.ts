@@ -7,6 +7,7 @@ export function useUiOverlayActive(): boolean {
   const showWaterModal = useOrganismStore((s) => s.showWaterModal);
   const showLeafModal = useOrganismStore((s) => s.showLeafModal);
   const showLoreSheet = useOrganismStore((s) => s.showLoreSheet);
+  const mobileDevOpen = useOrganismStore((s) => s.mobileDevOpen);
   const stripeCheckout = useOrganismStore((s) => s.stripeCheckout);
   const paymentCelebration = useOrganismStore((s) => s.paymentCelebration);
 
@@ -14,7 +15,24 @@ export function useUiOverlayActive(): boolean {
     showWaterModal ||
       showLeafModal ||
       showLoreSheet ||
+      mobileDevOpen ||
       stripeCheckout ||
       paymentCelebration
+  );
+}
+
+/** Pause WebGL when modals/checkout are open (frees main thread for Stripe). */
+export function useScenePaused(): boolean {
+  const stripeCheckout = useOrganismStore((s) => s.stripeCheckout);
+  const showWaterModal = useOrganismStore((s) => s.showWaterModal);
+  const showLeafModal = useOrganismStore((s) => s.showLeafModal);
+  const paymentCelebration = useOrganismStore((s) => s.paymentCelebration);
+  const showLoreSheet = useOrganismStore((s) => s.showLoreSheet);
+  return Boolean(
+    stripeCheckout ||
+      showWaterModal ||
+      showLeafModal ||
+      paymentCelebration ||
+      showLoreSheet
   );
 }

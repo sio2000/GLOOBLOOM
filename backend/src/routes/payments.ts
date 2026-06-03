@@ -31,6 +31,7 @@ export function createPaymentsRouter(payments: StripePaymentService): Router {
       userSessionId: z.string().uuid(),
       message: z.string().min(1).max(280).optional(),
       quantity: z.number().int().min(1).max(MAX_PURCHASE_QUANTITY).optional(),
+      checkoutMode: z.enum(["embedded", "hosted"]).optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -67,6 +68,7 @@ export function createPaymentsRouter(payments: StripePaymentService): Router {
         userSessionId: parsed.data.userSessionId,
         message: parsed.data.message?.trim(),
         quantity: parsed.data.quantity,
+        checkoutMode: parsed.data.checkoutMode,
       });
       res.json({ success: true, data: session });
     } catch (err) {

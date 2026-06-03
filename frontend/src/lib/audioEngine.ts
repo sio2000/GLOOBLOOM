@@ -15,7 +15,17 @@ interface AudioNodes {
   dryGain: GainNode;
 }
 
-const MASTER_VOLUME = 0.045;
+const MASTER_VOLUME_DESKTOP = 0.08;
+const MASTER_VOLUME_MOBILE = 0.22;
+
+function isMobileAudio(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 640px), (pointer: coarse)").matches;
+}
+
+function masterVolume(): number {
+  return isMobileAudio() ? MASTER_VOLUME_MOBILE : MASTER_VOLUME_DESKTOP;
+}
 
 type Listener = () => void;
 
@@ -83,7 +93,7 @@ class AudioEngine {
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0, ctx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(MASTER_VOLUME, ctx.currentTime + 4);
+    masterGain.gain.linearRampToValueAtTime(masterVolume(), ctx.currentTime + 4);
     masterGain.connect(ctx.destination);
 
     const breathGain = ctx.createGain();
@@ -181,7 +191,7 @@ class AudioEngine {
     const n = this.nodes;
     if (!n) return;
     this.muted = muted;
-    this.applyMasterVolume(muted ? 0 : MASTER_VOLUME);
+    this.applyMasterVolume(muted ? 0 : masterVolume());
     this.notify();
   }
 
@@ -234,7 +244,7 @@ class AudioEngine {
       osc.type = "sine";
       osc.frequency.value = freq;
       env.gain.setValueAtTime(0, t + i * 0.06);
-      env.gain.linearRampToValueAtTime(0.07, t + i * 0.06 + 0.008);
+      env.gain.linearRampToValueAtTime(isMobileAudio() ? 0.18 : 0.09, t + i * 0.06 + 0.008);
       env.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 1.0);
       osc.connect(env);
       env.connect(n.reverbConvolver);

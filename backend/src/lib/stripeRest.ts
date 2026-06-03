@@ -22,12 +22,21 @@ function buildCheckoutBody(input: {
   userSessionId: string;
   username: string;
   message?: string;
+  mode: "embedded" | "hosted";
 }): string {
   const quantity = clampPurchaseQuantity(input.quantity);
   const params = new URLSearchParams();
   params.set("mode", "payment");
-  params.set("ui_mode", "embedded_page");
-  params.set("redirect_on_completion", "never");
+  if (input.mode === "embedded") {
+    params.set("ui_mode", "embedded_page");
+    params.set("redirect_on_completion", "never");
+  } else {
+    params.set(
+      "success_url",
+      `${input.frontendUrl}/?payment=success&session_id={CHECKOUT_SESSION_ID}`
+    );
+    params.set("cancel_url", `${input.frontendUrl}/?payment=cancelled`);
+  }
   params.append("payment_method_types[]", "card");
   params.set("line_items[0][quantity]", String(quantity));
   params.set("line_items[0][price_data][currency]", "eur");
@@ -57,15 +66,28 @@ export async function createCheckoutSessionRest(
     message?: string;
     quantity?: number;
     frontendUrl: string;
+    mode?: "embedded" | "hosted";
   }
-): Promise<{ id: string; clientSecret: string }> {
+): Promise<{ id: string; clientSecret?: string; url?: string }> {
   const quantity = clampPurchaseQuantity(input.quantity ?? 1);
   const unitAmount = unitAmountCents(input.action);
-  const body = buildCheckoutBody({ ...input, unitAmount, quantity });
+  const mode = input.mode ?? "embedded";
+  const body = buildCheckoutBody({ ...input, unitAmount, quantity, mode });
   const text = await stripeHttpsRequest(secretKey, "POST", "/checkout/sessions", body);
   const data = JSON.parse(text) as CheckoutSessionResponse;
 
-  if (!data.id || !data.client_secret) {
+  if (!data.id) {
+    throw new Error("Stripe did not return a checkout session");
+  }
+
+  if (mode === "hosted") {
+    if (!data.url) {
+      throw new Error("Stripe did not return a hosted checkout URL");
+    }
+    return { id: data.id, url: data.url };
+  }
+
+  if (!data.client_secret) {
     throw new Error("Stripe did not return an embedded checkout session");
   }
 

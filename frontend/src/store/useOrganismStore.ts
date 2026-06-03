@@ -11,6 +11,7 @@ import {
   WateringEffect,
 } from "@/types/organism";
 import { PaymentAction } from "@/lib/payments";
+import { mobilePanelPatch, type MobilePanel } from "@/lib/mobileUi";
 
 export interface StripeCheckoutState {
   clientSecret: string;
@@ -47,6 +48,9 @@ interface OrganismStore {
   showWaterModal: boolean;
   showLeafModal: boolean;
   showLoreSheet: boolean;
+  mobileStatsExpanded: boolean;
+  mobileDevOpen: boolean;
+  mobileFeedOpen: boolean;
   showAdminPanel: boolean;
   pendingWateringEffects: WateringParticle[];
   activeCreatures: { id: string; type: string; spawnedAt: number }[];
@@ -68,6 +72,8 @@ interface OrganismStore {
   setShowWaterModal: (v: boolean) => void;
   setShowLeafModal: (v: boolean) => void;
   setShowLoreSheet: (v: boolean) => void;
+  openMobilePanel: (panel: MobilePanel | null) => void;
+  toggleMobilePanel: (panel: MobilePanel) => void;
   setShowAdminPanel: (v: boolean) => void;
   setLeaves: (leaves: LeafData[]) => void;
   addWateringEffect: (effect: WateringParticle) => void;
@@ -98,6 +104,9 @@ export const useOrganismStore = create<OrganismStore>()(
     showWaterModal: false,
     showLeafModal: false,
     showLoreSheet: false,
+    mobileStatsExpanded: false,
+    mobileDevOpen: false,
+    mobileFeedOpen: false,
     showAdminPanel: false,
     pendingWateringEffects: [],
     activeCreatures: [],
@@ -121,9 +130,22 @@ export const useOrganismStore = create<OrganismStore>()(
     setWateringCooldown: (v) => set({ wateringCooldown: v }),
     setUsername: (name) => set({ username: name }),
     setShowUsernameModal: (v) => set({ showUsernameModal: v }),
-    setShowWaterModal: (v) => set({ showWaterModal: v }),
-    setShowLeafModal: (v) => set({ showLeafModal: v }),
-    setShowLoreSheet: (v) => set({ showLoreSheet: v }),
+    setShowWaterModal: (v) =>
+      set(v ? { showWaterModal: true, ...mobilePanelPatch(null) } : { showWaterModal: false }),
+    setShowLeafModal: (v) =>
+      set(v ? { showLeafModal: true, ...mobilePanelPatch(null) } : { showLeafModal: false }),
+    setShowLoreSheet: (v) =>
+      set(v ? mobilePanelPatch("lore") : { showLoreSheet: false }),
+    openMobilePanel: (panel) => set(mobilePanelPatch(panel)),
+    toggleMobilePanel: (panel) => {
+      const s = get();
+      const isOpen =
+        (panel === "stats" && s.mobileStatsExpanded) ||
+        (panel === "lore" && s.showLoreSheet) ||
+        (panel === "dev" && s.mobileDevOpen) ||
+        (panel === "feed" && s.mobileFeedOpen);
+      set(mobilePanelPatch(isOpen ? null : panel));
+    },
     setShowAdminPanel: (v) => set({ showAdminPanel: v }),
     setLeaves: (leaves) => set({ leaves }),
 
@@ -159,7 +181,11 @@ export const useOrganismStore = create<OrganismStore>()(
 
     clearNotif: () => set({ showNotification: null }),
 
-    setStripeCheckout: (checkout) => set({ stripeCheckout: checkout }),
+    setStripeCheckout: (checkout) =>
+      set({
+        stripeCheckout: checkout,
+        ...(checkout ? mobilePanelPatch(null) : {}),
+      }),
     setPaymentCelebration: (celebration) => set({ paymentCelebration: celebration }),
     clearPaymentCelebration: () => set({ paymentCelebration: null }),
   }))

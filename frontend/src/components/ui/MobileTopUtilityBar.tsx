@@ -12,7 +12,8 @@ const MOBILE_UTILITY_BTN =
 /** Sound, Lore & Dev — stacked top-right on phones (no overlap). */
 export function MobileTopUtilityBar() {
   const showLore = useOrganismStore((s) => s.showLoreSheet);
-  const setShowLore = useOrganismStore((s) => s.setShowLoreSheet);
+  const openMobilePanel = useOrganismStore((s) => s.openMobilePanel);
+  const toggleMobilePanel = useOrganismStore((s) => s.toggleMobilePanel);
 
   return (
     <>
@@ -26,8 +27,8 @@ export function MobileTopUtilityBar() {
         <AudioToggle compact />
         <button
           type="button"
-          onClick={() => setShowLore(true)}
-          className={`${MOBILE_UTILITY_BTN} border-emerald-400/25 bg-emerald-950/40 text-emerald-300/75 hover:border-emerald-400/45`}
+          onClick={() => toggleMobilePanel("lore")}
+          className={`${MOBILE_UTILITY_BTN} min-h-[44px] border-emerald-400/25 bg-emerald-950/40 text-emerald-300/75 hover:border-emerald-400/45 touch-manipulation`}
           aria-label="About Gloobloom"
         >
           ℹ️ Lore
@@ -35,7 +36,7 @@ export function MobileTopUtilityBar() {
         <DevPanel embedded />
       </motion.div>
 
-      <LoreSheet open={showLore} onClose={() => setShowLore(false)} />
+      <LoreSheet open={showLore} onClose={() => openMobilePanel(null)} />
     </>
   );
 }

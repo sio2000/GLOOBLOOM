@@ -7,6 +7,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { api } from "@/lib/api";
 import { PaymentPriceBadge } from "@/components/ui/PaymentPriceBadge";
 import { PurchaseQuantityPicker } from "@/components/ui/PurchaseQuantityPicker";
+import { CloseButton } from "@/components/ui/CloseButton";
 import { priceForQuantity } from "@/lib/payments";
 
 export function LeafModal() {
@@ -62,7 +63,7 @@ export function LeafModal() {
       {show && (
         <>
           <motion.div
-            className="fixed inset-0 z-[78] bg-black/85 backdrop-blur-md"
+            className="fixed inset-0 z-[78] bg-black/90"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -76,13 +77,16 @@ export function LeafModal() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="w-full max-w-sm max-sm:max-w-none rounded-3xl max-sm:rounded-t-3xl max-sm:rounded-b-none border border-green-500/15 bg-[#0a0f0d] backdrop-blur-2xl p-8 max-sm:p-6 max-sm:pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl max-sm:max-h-[min(88dvh,100%)] max-sm:min-h-[min(52dvh,100%)] overflow-y-auto"
+              className="w-full max-w-sm max-sm:max-w-none rounded-3xl max-sm:rounded-t-3xl max-sm:rounded-b-none border border-green-500/15 bg-[#0a0f0d] p-8 max-sm:p-6 max-sm:pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl max-sm:max-h-[min(88dvh,100%)] max-sm:min-h-[min(52dvh,100%)] overflow-y-auto relative"
               initial={{ scale: 0.88, y: 24 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.88, y: 24 }}
               transition={{ type: "spring", damping: 22, stiffness: 260 }}
               onClick={(e) => e.stopPropagation()}
             >
+              <div className="absolute top-4 right-4 max-sm:top-3 max-sm:right-3">
+                <CloseButton onClick={() => setShow(false)} label="Close leaf modal" />
+              </div>
               <div className="flex justify-center mb-6">
                 <motion.div
                   className="w-16 h-16 rounded-full bg-gradient-to-br from-green-900/60 to-emerald-900/40 border border-green-400/25 flex items-center justify-center"

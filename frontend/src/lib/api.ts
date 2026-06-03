@@ -88,7 +88,8 @@ export const api = {
     userSessionId: string;
     message?: string;
     quantity?: number;
-  }): Promise<{ clientSecret: string; sessionId: string }> =>
+    checkoutMode?: "embedded" | "hosted";
+  }): Promise<{ clientSecret?: string; sessionId: string; url?: string }> =>
     fetchJSON("/api/payments/checkout", {
       method: "POST",
       body: JSON.stringify(body),
@@ -139,6 +140,13 @@ export const api = {
       fetchJSON("/api/admin/bloom", {
         method: "POST",
         headers: { "x-admin-secret": ADMIN_SECRET },
+      }),
+
+    devWater: (count: number, sessionId?: string): Promise<OrganismState> =>
+      fetchJSON("/api/admin/dev-water", {
+        method: "POST",
+        headers: { "x-admin-secret": ADMIN_SECRET },
+        body: JSON.stringify({ count, sessionId }),
       }),
   },
 };

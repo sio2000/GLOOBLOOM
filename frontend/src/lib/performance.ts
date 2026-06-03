@@ -30,7 +30,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     shadows: false,
     shadowMapSize: 0,
     antialias: false,
-    bloom: true,
+    bloom: false,
     bloomMultisampling: 0,
     starsMultiplier: 0.3,
     sporeMultiplier: 0.4,

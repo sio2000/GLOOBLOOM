@@ -41,6 +41,7 @@ import { MAX_ECOSYSTEM_STAGE } from "@/lib/stageConstants";
 import { getScales, getCameraLimits } from "@/lib/plantScale";
 import { scaledCount } from "@/lib/performance";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
+import { useScenePaused } from "@/hooks/useUiOverlayActive";
 
 function SceneLighting({ stage, season, hydration, castShadow, shadowMapSize }: {
   stage: number; season: Season; hydration: number;
@@ -280,6 +281,7 @@ export function GloobloomScene() {
   const perf = usePerformanceStore((s) => s.settings());
   const initPerf = usePerformanceStore((s) => s.init);
   const device = useDeviceInfo();
+  const scenePaused = useScenePaused();
   const fogColor = getStageColor(stage ?? 1).fog;
   const cameraLimits = getCameraLimits(stage, growth, {
     isMobile: device.isMobile,
@@ -292,6 +294,7 @@ export function GloobloomScene() {
   return (
     <div className="fixed inset-0 w-full h-[100dvh] touch-none">
       <Canvas
+        frameloop={scenePaused ? "never" : "always"}
         shadows={perf.shadows}
         dpr={perf.dpr}
         camera={{

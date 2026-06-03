@@ -103,6 +103,29 @@ export function createAdminRouter(
     }
   });
 
+  router.post("/dev-water", async (req: Request, res: Response) => {
+    if (!requireAdmin(req, res)) return;
+    const schema = z.object({
+      count: z.number().int().min(1).max(300),
+      sessionId: z.string().uuid().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Invalid count (1–300)" });
+      return;
+    }
+    const sessionId = parsed.data.sessionId ?? "00000000-0000-4000-8000-000000000001";
+    try {
+      let state = await organism.getState();
+      for (let i = 0; i < parsed.data.count; i++) {
+        state = await organism.water("DevTester", sessionId);
+      }
+      res.json({ success: true, data: state });
+    } catch (err) {
+      res.status(500).json({ success: false, error: "Dev watering failed" });
+    }
+  });
+
   router.get("/status", (req: Request, res: Response) => {
     if (!requireAdmin(req, res)) return;
     res.json({ success: true, message: "Admin access granted", timestamp: new Date() });

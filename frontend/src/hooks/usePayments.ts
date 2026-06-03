@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getOrCreateSessionId } from "@/lib/utils";
+import { getDeviceViewport } from "@/lib/device";
 import { useSocket } from "@/hooks/useSocket";
 import { PaymentAction, clampPurchaseQuantity } from "@/lib/payments";
 import { useOrganismStore } from "@/store/useOrganismStore";
@@ -11,6 +12,15 @@ interface PaymentConfig {
   enabled: boolean;
   skipPayments: boolean;
   publishableKey: string | null;
+}
+
+function preferHostedCheckout(): boolean {
+  if (typeof window === "undefined") return false;
+  const vp = getDeviceViewport();
+  if (vp.isMobile) return true;
+  // In-app browsers (Instagram, Facebook) break Stripe embedded iframes
+  const ua = navigator.userAgent;
+  return /Instagram|FBAN|FBAV|Line\//i.test(ua);
 }
 
 export function usePayments() {
@@ -61,7 +71,7 @@ export function usePayments() {
       username: string,
       message?: string,
       quantity = 1
-    ): Promise<{ openedModal: boolean; fulfilled: boolean }> => {
+    ): Promise<{ openedModal: boolean; fulfilled: boolean; redirecting?: boolean }> => {
       const cleanName = username.trim().slice(0, 32);
       if (!cleanName) {
         return { openedModal: false, fulfilled: false };
@@ -82,6 +92,8 @@ export function usePayments() {
         );
       }
 
+      const checkoutMode = preferHostedCheckout() ? "hosted" : "embedded";
+
       setCheckoutLoading(true);
       try {
         const payload: {
@@ -90,16 +102,28 @@ export function usePayments() {
           userSessionId: string;
           message?: string;
           quantity?: number;
+          checkoutMode: "embedded" | "hosted";
         } = {
           action,
           username: cleanName,
           userSessionId: getOrCreateSessionId(),
+          checkoutMode,
         };
         const trimmedMsg = message?.trim();
         if (trimmedMsg) payload.message = trimmedMsg;
         if (action !== "comment") payload.quantity = qty;
 
-        const { clientSecret, sessionId } = await api.createCheckout(payload);
+        const { clientSecret, sessionId, url } = await api.createCheckout(payload);
+
+        if (url) {
+          window.location.assign(url);
+          return { openedModal: false, fulfilled: false, redirecting: true };
+        }
+
+        if (!clientSecret) {
+          throw new Error("Checkout session missing client secret");
+        }
+
         setStripeCheckout({
           clientSecret,
           sessionId,

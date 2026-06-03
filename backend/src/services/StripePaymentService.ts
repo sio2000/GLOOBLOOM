@@ -63,7 +63,8 @@ export class StripePaymentService {
     userSessionId: string;
     message?: string;
     quantity?: number;
-  }): Promise<{ clientSecret: string; sessionId: string }> {
+    checkoutMode?: "embedded" | "hosted";
+  }): Promise<{ clientSecret?: string; sessionId: string; url?: string }> {
     if (!this.secretKey) {
       throw new Error("Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
     }
@@ -77,7 +78,8 @@ export class StripePaymentService {
     );
 
     let sessionId: string;
-    let clientSecret: string;
+    let clientSecret: string | undefined;
+    let url: string | undefined;
     try {
       const session = await createCheckoutSessionRest(this.secretKey, {
         action: input.action,
@@ -86,9 +88,11 @@ export class StripePaymentService {
         message: input.message,
         quantity,
         frontendUrl,
+        mode: input.checkoutMode ?? "embedded",
       });
       sessionId = session.id;
       clientSecret = session.clientSecret;
+      url = session.url;
     } catch (restErr) {
       const restMsg = restErr instanceof Error ? restErr.message : "Stripe checkout failed";
       throw new Error(restMsg);
@@ -107,7 +111,7 @@ export class StripePaymentService {
       },
     });
 
-    return { clientSecret, sessionId };
+    return { clientSecret, sessionId, url };
   }
 
   async handleWebhook(rawBody: Buffer, signature: string | undefined): Promise<void> {

@@ -17,7 +17,14 @@ import { MobilePanelToggle } from "@/components/ui/MobilePanelToggle";
 export function StatsPanel() {
   const state = useOrganismStore((s) => s.state);
   const onlineCount = useOrganismStore((s) => s.onlineCount);
-  const [expanded, setExpanded] = useState(false);
+  const expanded = useOrganismStore((s) => s.mobileStatsExpanded);
+  const toggleMobilePanel = useOrganismStore((s) => s.toggleMobilePanel);
+  const mobileDevOpen = useOrganismStore((s) => s.mobileDevOpen);
+  const showLore = useOrganismStore((s) => s.showLoreSheet);
+  const mobilePanelHidden = mobileDevOpen || showLore;
+  const mobileDevOpen = useOrganismStore((s) => s.mobileDevOpen);
+  const showLoreSheet = useOrganismStore((s) => s.showLoreSheet);
+  const hideMobileSummary = mobileDevOpen || showLoreSheet;
 
   if (!state) return null;
 
@@ -35,7 +42,7 @@ export function StatsPanel() {
   return (
     <>
       <motion.div
-        className="fixed top-4 left-4 max-sm:top-[max(0.5rem,env(safe-area-inset-top))] max-sm:left-2 max-sm:right-[5.5rem] z-30 w-64 max-sm:w-auto max-sm:max-w-none"
+        className={`fixed top-4 left-4 max-sm:top-[max(0.5rem,env(safe-area-inset-top))] max-sm:left-2 max-sm:right-[5.5rem] z-30 w-64 max-sm:w-auto max-sm:max-w-none ${hideMobileSummary ? "max-sm:opacity-0 max-sm:pointer-events-none max-sm:scale-95" : ""}`}
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.8 }}
@@ -69,7 +76,7 @@ export function StatsPanel() {
             <MobilePanelToggle
               variant="bar"
               expanded={expanded}
-              onToggle={() => setExpanded((v) => !v)}
+              onToggle={() => toggleMobilePanel("stats")}
               label={expanded ? "Hide details" : "More organism stats"}
               badge={`${Math.round(water)}%`}
             />

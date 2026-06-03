@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { CloseButton } from "@/components/ui/CloseButton";
 
 export const LORE_ITEMS = [
   {
@@ -62,14 +63,7 @@ export function LoreSheet({
                 <span className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/60">
                   The Secret of Gloobloom
                 </span>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full border border-white/10 text-white/50 text-sm"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
+                <CloseButton onClick={onClose} label="Close lore" />
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-2.5 scrollbar-hide">
                 {LORE_ITEMS.map((item, i) => (
