@@ -40,8 +40,8 @@ export function AnimatedCaterpillar({
   const orientRef = useRef<THREE.Group>(null);
   const phase = (seed * 0.17) % 1;
   const ySmooth = useRef((yMin + yMax) * 0.5);
-  const inwardLocal = useRef(new THREE.Vector3());
   const surfaceOffset = 0.014 * scale;
+  const barkCling = 0.01 * scale;
 
   useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
@@ -59,39 +59,34 @@ export function AnimatedCaterpillar({
     const stepWobble = Math.sin(walk.stepPhase + pattern * 0.7) * (mobileCrawl ? 0.01 : 0.006);
     const wobbleA = angle + stepWobble;
     const radius = trunkRadiusAt(trunk, y, surfaceOffset);
+    const cling = mobileCrawl ? barkCling : 0;
+    const cx = Math.cos(wobbleA);
+    const cz = Math.sin(wobbleA);
 
-    ref.current.position.set(Math.cos(wobbleA) * radius, y, Math.sin(wobbleA) * radius);
+    ref.current.position.set(cx * (radius - cling), y, cz * (radius - cling));
     ref.current.rotation.y = wobbleA + Math.PI / 2;
 
     if (orientRef.current) {
-      orientRef.current.rotation.y = walk.direction === 1 ? 0 : Math.PI;
+      if (mobileCrawl) {
+        orientRef.current.rotation.set(walk.direction === 1 ? 0 : Math.PI, 0, 0);
+      } else {
+        orientRef.current.rotation.set(0, walk.direction === 1 ? 0 : Math.PI, 0);
+      }
     }
 
     if (bodyRef.current) {
-      const crawlTilt =
-        walk.direction * walk.moveAmount * 0.13 + Math.sin(walk.stepPhase * 1.3) * 0.04;
+      const crawlTilt = mobileCrawl
+        ? Math.abs(walk.moveAmount) * 0.08 + Math.sin(walk.stepPhase * 1.3) * 0.04
+        : walk.direction * walk.moveAmount * 0.13 + Math.sin(walk.stepPhase * 1.3) * 0.04;
       const bentTilt = crawlTilt * (1 - walk.posture);
       bodyRef.current.rotation.x = bentTilt;
       bodyRef.current.rotation.z = walk.posture * 0.22;
 
       const stepLift =
         Math.abs(Math.sin(walk.stepPhase * 2.2)) * 0.003 * scale * walk.moveAmount;
-
-      if (mobileCrawl) {
-        const outwardWorld = new THREE.Vector3(Math.cos(wobbleA), 0, Math.sin(wobbleA));
-        inwardLocal.current.copy(outwardWorld);
-        inwardLocal.current.applyAxisAngle(new THREE.Vector3(0, 1, 0), -(wobbleA + Math.PI / 2));
-        const cling = 0.01 * scale;
-        bodyRef.current.position.set(
-          -inwardLocal.current.x * cling,
-          stepLift,
-          -inwardLocal.current.z * cling
-        );
-      } else {
-        bodyRef.current.position.y = stepLift;
-        bodyRef.current.position.x = 0;
-        bodyRef.current.position.z = 0;
-      }
+      bodyRef.current.position.y = stepLift;
+      bodyRef.current.position.x = 0;
+      bodyRef.current.position.z = 0;
     }
   }, seed);
 
