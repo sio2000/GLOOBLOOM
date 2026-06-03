@@ -79,6 +79,8 @@ function buildSettings(
       enableAtmosphere: false,
       enableHighStageFx: false,
       enableWateringFlames: false,
+      shadows: s.shadows || true,
+      shadowMapSize: s.shadowMapSize > 0 ? s.shadowMapSize : 128,
     };
   }
   return s;

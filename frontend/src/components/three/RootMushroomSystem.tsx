@@ -66,6 +66,8 @@ function RootMushroom({
   const bodyRef = useRef<THREE.Group>(null);
   const capMatRef = useRef<THREE.MeshStandardMaterial>(null);
   const heightRef = useRef(Math.max(0.04, targetHeight * def.heightMul));
+  const mobileStatic = usePerformanceStore((s) => s.settings().mobileStatic);
+  const staticH = Math.max(0.04, targetHeight * def.heightMul);
   const capTilt = useMemo(() => (def.id % 3 - 1) * 0.06, [def.id]);
   const geoQuality = usePerformanceStore((s) => s.settings().geoQuality);
   const capSegs = geoSeg(32, geoQuality, 16);
@@ -81,6 +83,7 @@ function RootMushroom({
   const STEM_R_TOP = 0.038;
 
   useAdaptiveFrame(({ clock }, delta) => {
+    if (mobileStatic) return;
     const goal = Math.max(0.04, targetHeight * def.heightMul);
     heightRef.current = THREE.MathUtils.lerp(heightRef.current, goal, Math.min(1, delta * 1.5));
     const h = heightRef.current;
@@ -100,8 +103,19 @@ function RootMushroom({
   });
 
   return (
-    <group ref={rootRef}>
-      <group ref={bodyRef} scale={[heightRef.current, heightRef.current, heightRef.current]}>
+    <group
+      ref={mobileStatic ? undefined : rootRef}
+      position={mobileStatic ? [position[0], baseY, position[2]] : undefined}
+      rotation-y={mobileStatic ? def.angle : undefined}
+    >
+      <group
+        ref={mobileStatic ? undefined : bodyRef}
+        scale={
+          mobileStatic
+            ? [staticH, staticH, staticH]
+            : [heightRef.current, heightRef.current, heightRef.current]
+        }
+      >
         {/* Mycelium pad */}
         <mesh position={[0, 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <circleGeometry args={[0.52, 16]} />
@@ -156,10 +170,12 @@ function RootMushroom({
         <group position={[0, STEM_TOP, 0]} rotation={[capTilt, 0, capTilt * 0.5]}>
           <mesh geometry={capGeo} castShadow receiveShadow>
             <meshStandardMaterial
-              ref={capMatRef}
+              ref={mobileStatic ? undefined : capMatRef}
               color={palette.cap}
               emissive={palette.capEmissive}
-              emissiveIntensity={0.1}
+              emissiveIntensity={
+                mobileStatic ? 0.1 + (hydration / 100) * 0.14 : 0.1
+              }
               roughness={0.48}
               metalness={0.02}
             />

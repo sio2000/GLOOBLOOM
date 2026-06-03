@@ -14,6 +14,7 @@ import { AtmosphereSystem } from "./AtmosphereSystem";
 import { RootMushroomSystem } from "./RootMushroomSystem";
 import { RootFeatherSystem } from "./RootFeatherSystem";
 import { WateringFlameSystem } from "./WateringFlameSystem";
+import { StaticRootAmbience } from "./StaticRootAmbience";
 import { GiantFlyingInsects } from "./GiantFlyingInsects";
 import { HighStageEffects } from "./HighStageEffects";
 import { SceneVisibilityGate } from "./SceneVisibilityGate";
@@ -62,6 +63,10 @@ export function LazyWorldContent({
             decay={decay}
           />
         </SceneVisibilityGate>
+      )}
+
+      {perf.enableRootDecor && perf.mobileStatic && phaseOk(1) && (
+        <StaticRootAmbience stage={stage} decay={decay} />
       )}
 
       {perf.enableRootDecor && phaseOk(2) && (
