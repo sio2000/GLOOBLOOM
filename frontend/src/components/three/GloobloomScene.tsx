@@ -415,6 +415,23 @@ export function GloobloomScene() {
 
   const frameloop = sceneFrozen ? "never" : demandMode ? "demand" : "always";
 
+  // Mobile-only: shed per-render fragment cost as the scene gets busier past
+  // stage 100. Purely a resolution trade — geometry, the plant and creatures
+  // are untouched — but it markedly cuts the GPU work each demand-render does,
+  // which is what makes high stages stutter on phones.
+  const dpr = useMemo(() => {
+    if (!device.isMobile || !Array.isArray(perf.dpr)) return perf.dpr;
+    const [lo, hi] = perf.dpr as [number, number];
+    const k =
+      stage >= 300 ? 0.66 :
+      stage >= 200 ? 0.74 :
+      stage >= 150 ? 0.82 :
+      stage >= 100 ? 0.88 :
+      1;
+    if (k === 1) return perf.dpr;
+    return [lo * k, hi * k] as [number, number];
+  }, [device.isMobile, perf.dpr, stage]);
+
   useEffect(() => {
     initPerf();
   }, [initPerf]);
@@ -429,7 +446,7 @@ export function GloobloomScene() {
       <Canvas
         frameloop={frameloop}
         shadows={perf.shadows}
-        dpr={perf.dpr}
+        dpr={dpr}
         camera={{
           position: [0, cameraLimits.cameraY, cameraLimits.cameraZ],
           fov: cameraLimits.fov,

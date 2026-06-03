@@ -2,11 +2,27 @@
 
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
+import { useOrganismStore } from "@/store/useOrganismStore";
 
 const MOBILE_RENDER_MIN_MS = 95;
 const MOBILE_INTERACT_RENDER_MIN_MS = 150;
 let lastMobileRenderMs = 0;
 let mobileRenderTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Each demand-render redraws the whole scene, which gets much heavier past
+ * stage 100. Stretching the minimum gap between renders (a few fps) at high
+ * stages cuts that per-frame GPU cost without touching the plant or any
+ * creature behaviour — the scene just refreshes slightly less often.
+ */
+function highStageRenderRelaxMs(): number {
+  const stage = useOrganismStore.getState().state?.ecosystemStage ?? 1;
+  if (stage >= 300) return 70;
+  if (stage >= 200) return 50;
+  if (stage >= 150) return 35;
+  if (stage >= 100) return 22;
+  return 0;
+}
 
 export function isDemandMode(): boolean {
   const perf = usePerformanceStore.getState();
@@ -69,9 +85,11 @@ export function requestSceneRender(force = false): void {
     return;
   }
 
-  const minMs = isCameraInteracting()
-    ? MOBILE_INTERACT_RENDER_MIN_MS
-    : MOBILE_RENDER_MIN_MS;
+  const relax = highStageRenderRelaxMs();
+  const minMs =
+    (isCameraInteracting()
+      ? MOBILE_INTERACT_RENDER_MIN_MS
+      : MOBILE_RENDER_MIN_MS) + relax;
   const now = performance.now();
   const elapsed = now - lastMobileRenderMs;
 

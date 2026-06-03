@@ -41,15 +41,15 @@ export function StatsPanel() {
   return (
     <>
       <motion.div
-        className={`fixed top-4 left-4 max-sm:top-[max(0.5rem,env(safe-area-inset-top))] max-sm:left-2 max-sm:right-[5.5rem] z-30 w-64 max-sm:w-auto max-sm:max-w-none max-sm:max-h-[min(62dvh,520px)] max-sm:flex max-sm:flex-col ${expanded ? "max-sm:z-40" : ""} ${hideMobileSummary ? "max-sm:opacity-0 max-sm:pointer-events-none max-sm:scale-95" : ""}`}
+        className={`fixed top-4 left-4 max-sm:top-[max(0.5rem,env(safe-area-inset-top))] max-sm:left-2 max-sm:right-[5.5rem] z-30 w-64 max-sm:w-auto max-sm:max-w-none ${expanded ? "max-sm:z-40" : ""} ${hideMobileSummary ? "max-sm:opacity-0 max-sm:pointer-events-none max-sm:scale-95" : ""}`}
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.8 }}
       >
-        <div className="rounded-2xl border border-white/5 bg-black/55 backdrop-blur-xl max-sm:backdrop-blur-md mobile-panel-surface p-4 max-sm:p-3 max-sm:space-y-0 max-sm:min-h-0 max-sm:overflow-hidden max-sm:flex max-sm:flex-col max-sm:flex-1 space-y-4">
+        <div className="rounded-2xl border border-white/5 bg-black/55 backdrop-blur-xl max-sm:backdrop-blur-md mobile-panel-surface p-4 max-sm:p-3 max-sm:space-y-0 space-y-4">
           {/* Mobile — always-visible summary + collapsible details */}
-          <div className="sm:hidden min-h-0 flex flex-col flex-1 overflow-hidden">
-            <div className="min-w-0 shrink-0">
+          <div className="sm:hidden">
+            <div className="min-w-0">
               <div className="text-[8px] uppercase tracking-widest text-white/30">
                 Stage {state.ecosystemStage}/{MAX_ECOSYSTEM_STAGE}
               </div>
@@ -73,26 +73,24 @@ export function StatsPanel() {
               </div>
             </div>
 
-            <div className="shrink-0">
-              <MobilePanelToggle
-                variant="bar"
-                expanded={expanded}
-                onToggle={() => toggleMobilePanel("stats")}
-                label={expanded ? "Hide details" : "More organism stats"}
-                badge={`${Math.round(water)}%`}
-              />
-            </div>
+            <MobilePanelToggle
+              variant="bar"
+              expanded={expanded}
+              onToggle={() => toggleMobilePanel("stats")}
+              label={expanded ? "Hide details" : "More organism stats"}
+              badge={`${Math.round(water)}%`}
+            />
 
             <AnimatePresence initial={false}>
               {expanded && (
                 <motion.div
-                  className="flex-1 min-h-0 overflow-hidden"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: isMobile ? 0.12 : 0.22 }}
+                  className="overflow-hidden"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: isMobile ? 0.16 : 0.24 }}
                 >
-                  <div className="h-full pt-3 pb-2 border-t border-white/8 overflow-y-auto overscroll-contain scrollbar-hide">
+                  <div className="mt-3 pt-3 pb-1 border-t border-white/8 max-h-[48dvh] overflow-y-auto overscroll-contain scrollbar-hide">
                     <MobileStatsAccordion
                       state={state}
                       moodColor={moodColor}
