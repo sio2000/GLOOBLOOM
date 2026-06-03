@@ -19,7 +19,7 @@ services:
       - key: DATABASE_URL
         value: file:./prisma/prod.db
       - key: FRONTEND_URL
-        sync: false
+        value: https://aesthetic-sprite-583fdb.netlify.app
       - key: ADMIN_SECRET
         generateValue: true
       - key: ADMIN_PANEL_PASSWORD

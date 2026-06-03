@@ -9,6 +9,9 @@
 [build.environment]
   NODE_VERSION = "20"
   NEXT_TELEMETRY_DISABLED = "1"
+  # Backend on Render (render.yaml → gloobloom-api). Override in Netlify UI if your URL differs.
+  NEXT_PUBLIC_API_URL = "https://gloobloom-api.onrender.com"
+  NEXT_PUBLIC_WS_URL = "https://gloobloom-api.onrender.com"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

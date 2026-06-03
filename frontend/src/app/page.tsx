@@ -42,6 +42,8 @@ function GloobloomApp() {
   const addActivity = useOrganismStore((s) => s.addActivity);
   const setShowAdminPanel = useOrganismStore((s) => s.setShowAdminPanel);
   const showAdminPanel = useOrganismStore((s) => s.showAdminPanel);
+  const setIsLoading = useOrganismStore((s) => s.setIsLoading);
+  const showNotif = useOrganismStore((s) => s.showNotif);
   const { updateMood } = useAudioSystem();
   const state = useOrganismStore((s) => s.state);
 
@@ -63,11 +65,15 @@ function GloobloomApp() {
         setLeaves(leaves);
         activities.forEach(addActivity);
       } catch {
-        /* socket bootstrap */
+        showNotif(
+          "Could not reach the Gloobloom server. Check that the Render API is running.",
+          "decay"
+        );
+        setIsLoading(false);
       }
     }
     bootstrap();
-  }, []);
+  }, [addActivity, setIsLoading, setLeaves, setState, showNotif]);
 
   useEffect(() => {
     if (state) {
