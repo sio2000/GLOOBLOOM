@@ -1,4 +1,12 @@
-export type QualityTier = "low" | "medium" | "high";
+import type { DeviceProfile } from "@/lib/deviceProfile";
+import { detectDeviceProfile } from "@/lib/deviceProfile";
+
+export type QualityTier =
+  | "ultra_low"
+  | "low"
+  | "medium"
+  | "high"
+  | "ultra";
 
 export interface QualitySettings {
   tier: QualityTier;
@@ -8,29 +16,19 @@ export interface QualitySettings {
   antialias: boolean;
   bloom: boolean;
   bloomMultisampling: number;
-  /** Ambient-only multipliers — content counts (flowers, creatures) stay unchanged */
   starsMultiplier: number;
   sporeMultiplier: number;
   dustMultiplier: number;
   seasonParticleMultiplier: number;
-  /** Run heavy CPU animation loops every N frames */
   frameSkip: number;
-  /** Throttle flying creatures separately — higher = less CPU */
   creatureFrameSkip: number;
-  /** Scale creature instance counts (0.35–1) — visual density, not motion */
   creatureMultiplier: number;
-  /** Scale giant insect copies (0.35–1) */
   insectMultiplier: number;
-  /** Scale pollen orb count */
   pollenMultiplier: number;
-  /** Scale geometry segment counts (0.4–1) */
   geoQuality: number;
-  /** Scale animation time — slower motion on weak devices, same scene content */
   animTimeScale: number;
-  /** Mobile demand frameloop — desktop always false */
   demandMode: boolean;
   ultraLow: boolean;
-  /** Skip all animated useFrame work */
   mobileStatic: boolean;
   enablePostProcessing: boolean;
   enableCreatures: boolean;
@@ -44,13 +42,40 @@ export interface QualitySettings {
   enableWateringFlames: boolean;
   maxStarCount: number;
   labelsMax: number;
+  drawDistanceScale: number;
+  lazyWorldMaxPhase: number;
 }
 
-const DESKTOP_DEFAULTS = {
+export const TIER_ORDER: QualityTier[] = [
+  "ultra_low",
+  "low",
+  "medium",
+  "high",
+  "ultra",
+];
+
+const BASE: Omit<QualitySettings, "tier"> = {
+  dpr: [1, 1],
+  shadows: false,
+  shadowMapSize: 0,
+  antialias: false,
+  bloom: false,
+  bloomMultisampling: 0,
+  starsMultiplier: 1,
+  sporeMultiplier: 1,
+  dustMultiplier: 1,
+  seasonParticleMultiplier: 1,
+  frameSkip: 1,
+  creatureFrameSkip: 2,
+  creatureMultiplier: 1,
+  insectMultiplier: 1,
+  pollenMultiplier: 1,
+  geoQuality: 1,
+  animTimeScale: 1,
   demandMode: false,
   ultraLow: false,
   mobileStatic: false,
-  enablePostProcessing: true,
+  enablePostProcessing: false,
   enableCreatures: true,
   enableParticles: true,
   enableAtmosphere: true,
@@ -62,130 +87,234 @@ const DESKTOP_DEFAULTS = {
   enableWateringFlames: true,
   maxStarCount: 8000,
   labelsMax: 100,
-} as const;
+  drawDistanceScale: 1,
+  lazyWorldMaxPhase: 3,
+};
 
-const TIER_ORDER: QualityTier[] = ["low", "medium", "high"];
-
-export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
+export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
+  ultra_low: {
+    ...BASE,
+    tier: "ultra_low",
+    dpr: [0.5, 0.65],
+    frameSkip: 999,
+    creatureFrameSkip: 999,
+    creatureMultiplier: 0.05,
+    insectMultiplier: 0.03,
+    pollenMultiplier: 0.04,
+    starsMultiplier: 0.04,
+    sporeMultiplier: 0.05,
+    dustMultiplier: 0.05,
+    seasonParticleMultiplier: 0.05,
+    geoQuality: 0.35,
+    animTimeScale: 0,
+    demandMode: true,
+    ultraLow: true,
+    mobileStatic: true,
+    enableCreatures: false,
+    enableParticles: false,
+    enableAtmosphere: false,
+    enableHighStageFx: false,
+    enableGiantInsects: false,
+    enableStars: true,
+    enableExtendedStage: false,
+    enableRootDecor: false,
+    enableWateringFlames: false,
+    maxStarCount: 32,
+    labelsMax: 0,
+    drawDistanceScale: 0.65,
+    lazyWorldMaxPhase: 0,
+  },
   low: {
+    ...BASE,
     tier: "low",
     dpr: [0.65, 0.85],
-    shadows: false,
-    shadowMapSize: 0,
-    antialias: false,
-    bloom: false,
-    bloomMultisampling: 0,
-    starsMultiplier: 0.3,
-    sporeMultiplier: 0.4,
-    dustMultiplier: 0.35,
-    seasonParticleMultiplier: 0.4,
-    frameSkip: 3,
-    creatureFrameSkip: 4,
-    creatureMultiplier: 0.42,
-    insectMultiplier: 0.45,
-    pollenMultiplier: 0.45,
-    geoQuality: 0.45,
-    animTimeScale: 0.38,
-    ...DESKTOP_DEFAULTS,
+    frameSkip: 4,
+    creatureFrameSkip: 5,
+    creatureMultiplier: 0.2,
+    insectMultiplier: 0.18,
+    pollenMultiplier: 0.2,
+    starsMultiplier: 0.15,
+    sporeMultiplier: 0.2,
+    dustMultiplier: 0.18,
+    seasonParticleMultiplier: 0.2,
+    geoQuality: 0.5,
+    animTimeScale: 0.35,
+    demandMode: true,
+    enablePostProcessing: false,
+    enableHighStageFx: false,
+    enableGiantInsects: false,
+    maxStarCount: 400,
+    labelsMax: 12,
+    drawDistanceScale: 0.78,
+    lazyWorldMaxPhase: 1,
   },
   medium: {
+    ...BASE,
     tier: "medium",
-    dpr: [1, 1.2],
+    dpr: [0.85, 1.05],
     shadows: true,
     shadowMapSize: 256,
     antialias: true,
-    bloom: true,
-    bloomMultisampling: 2,
-    starsMultiplier: 0.65,
-    sporeMultiplier: 0.7,
-    dustMultiplier: 0.6,
-    seasonParticleMultiplier: 0.65,
     frameSkip: 2,
     creatureFrameSkip: 3,
-    creatureMultiplier: 0.72,
-    insectMultiplier: 0.7,
-    pollenMultiplier: 0.7,
+    creatureMultiplier: 0.55,
+    insectMultiplier: 0.5,
+    pollenMultiplier: 0.55,
+    starsMultiplier: 0.45,
+    sporeMultiplier: 0.5,
+    dustMultiplier: 0.45,
+    seasonParticleMultiplier: 0.5,
     geoQuality: 0.72,
-    animTimeScale: 0.68,
-    ...DESKTOP_DEFAULTS,
+    animTimeScale: 0.65,
+    bloom: true,
+    bloomMultisampling: 2,
+    enablePostProcessing: true,
+    maxStarCount: 2000,
+    labelsMax: 40,
+    drawDistanceScale: 0.9,
+    lazyWorldMaxPhase: 2,
   },
   high: {
+    ...BASE,
     tier: "high",
-    dpr: [1, 1.5],
+    dpr: [1, 1.25],
     shadows: true,
     shadowMapSize: 512,
     antialias: true,
     bloom: true,
-    bloomMultisampling: 4,
-    starsMultiplier: 1,
-    sporeMultiplier: 1,
-    dustMultiplier: 1,
-    seasonParticleMultiplier: 1,
+    bloomMultisampling: 3,
     frameSkip: 1,
     creatureFrameSkip: 2,
-    creatureMultiplier: 1,
-    insectMultiplier: 1,
-    pollenMultiplier: 1,
-    geoQuality: 1,
+    creatureMultiplier: 0.85,
+    insectMultiplier: 0.82,
+    pollenMultiplier: 0.85,
+    starsMultiplier: 0.75,
+    geoQuality: 0.9,
+    animTimeScale: 0.88,
+    enablePostProcessing: true,
+    maxStarCount: 5000,
+    labelsMax: 70,
+    drawDistanceScale: 1,
+    lazyWorldMaxPhase: 3,
+  },
+  ultra: {
+    ...BASE,
+    tier: "ultra",
+    dpr: [1, 1.5],
+    shadows: true,
+    shadowMapSize: 1024,
+    antialias: true,
+    bloom: true,
+    bloomMultisampling: 4,
+    frameSkip: 1,
+    creatureFrameSkip: 1,
     animTimeScale: 1,
-    ...DESKTOP_DEFAULTS,
+    enablePostProcessing: true,
+    maxStarCount: 8000,
+    labelsMax: 100,
+    drawDistanceScale: 1.1,
+    lazyWorldMaxPhase: 3,
   },
 };
 
-export function detectUltraLowDevice(): boolean {
-  if (typeof window === "undefined") return false;
-  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
-  const cores = navigator.hardwareConcurrency ?? 8;
-  const ua = navigator.userAgent;
-  const oldIphone = /iPhone OS (1[0-4]|[0-9])_/.test(ua);
-  const androidMid = /Android/i.test(ua) && (memory <= 4 || cores <= 6);
-  return memory < 6 || oldIphone || androidMid;
+export function detectStartupTier(profile?: DeviceProfile): QualityTier {
+  const p = profile ?? detectDeviceProfile();
+
+  if (p.saveData || p.lowEnd || p.gpuTier === 0) return "ultra_low";
+  if (p.deviceClass === "phone") return "ultra_low";
+  if (p.deviceClass === "tablet") {
+    if (p.memoryGb < 6 || p.cores <= 6) return "low";
+    return "medium";
+  }
+
+  if (p.score >= 95 && p.memoryGb >= 16 && p.cores >= 12 && p.gpuTier >= 3)
+    return "ultra";
+  if (p.score >= 72 && p.memoryGb >= 8 && p.cores >= 8 && p.gpuTier >= 2)
+    return "high";
+  if (p.score >= 48 && p.memoryGb >= 6 && p.cores >= 6) return "medium";
+  if (p.score >= 28) return "low";
+  return "ultra_low";
 }
 
-export function detectDeviceTier(): QualityTier {
-  if (typeof window === "undefined") return "medium";
-
-  const ua = navigator.userAgent;
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(ua);
-  const cores = navigator.hardwareConcurrency ?? 4;
-  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
-  const coarse = window.matchMedia("(pointer: coarse)").matches;
-  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
-
-  if (saveData || (isMobile && cores <= 6) || (coarse && memory <= 4)) return "low";
-  if (isMobile || cores <= 4 || memory <= 4) return "medium";
-  if (!isMobile && cores >= 8 && memory >= 8) return "high";
+export function detectDeviceMaxTier(profile?: DeviceProfile): QualityTier {
+  const p = profile ?? detectDeviceProfile();
+  if (p.deviceClass === "phone") return "low";
+  if (p.deviceClass === "tablet") return p.lowEnd ? "medium" : "high";
+  if (p.gpuTier <= 1 && p.memoryGb < 8) return "medium";
+  if (p.gpuTier >= 3 && p.memoryGb >= 16 && p.cores >= 12) return "ultra";
+  if (p.gpuTier >= 2 && p.memoryGb >= 8) return "high";
   return "medium";
 }
 
 export function getQualitySettings(tier: QualityTier): QualitySettings {
-  return QUALITY_SETTINGS[tier];
+  return { ...QUALITY_PRESETS[tier] };
+}
+
+export function tierIndex(tier: QualityTier): number {
+  return TIER_ORDER.indexOf(tier);
 }
 
 export function clampTier(tier: QualityTier, max: QualityTier): QualityTier {
-  const ti = TIER_ORDER.indexOf(tier);
-  const maxI = TIER_ORDER.indexOf(max);
-  return TIER_ORDER[Math.min(ti, maxI)]!;
+  return TIER_ORDER[Math.min(tierIndex(tier), tierIndex(max))]!;
 }
 
 export function degradeTier(current: QualityTier): QualityTier {
-  const i = TIER_ORDER.indexOf(current);
+  const i = tierIndex(current);
   return TIER_ORDER[Math.max(0, i - 1)]!;
 }
 
 export function improveTier(current: QualityTier, max: QualityTier): QualityTier {
-  const i = TIER_ORDER.indexOf(current);
-  const maxI = TIER_ORDER.indexOf(max);
+  const i = tierIndex(current);
+  const maxI = tierIndex(max);
   return TIER_ORDER[Math.min(maxI, i + 1)]!;
 }
 
-/** Scale a count for ambient particles — never below 1 when base > 0 */
+/** Fine-grained multiplier from dynamic scaler (0.35–1). */
+export function applyDynamicScale(
+  settings: QualitySettings,
+  scale: number
+): QualitySettings {
+  const s = Math.max(0.35, Math.min(1, scale));
+  return {
+    ...settings,
+    starsMultiplier: settings.starsMultiplier * s,
+    sporeMultiplier: settings.sporeMultiplier * s,
+    dustMultiplier: settings.dustMultiplier * s,
+    seasonParticleMultiplier: settings.seasonParticleMultiplier * s,
+    creatureMultiplier: settings.creatureMultiplier * s,
+    insectMultiplier: settings.insectMultiplier * s,
+    pollenMultiplier: settings.pollenMultiplier * s,
+    geoQuality: settings.geoQuality * (0.5 + s * 0.5),
+    maxStarCount: Math.max(
+      settings.tier === "ultra_low" ? 16 : 8,
+      Math.round(settings.maxStarCount * s)
+    ),
+    labelsMax: Math.round(settings.labelsMax * s),
+    drawDistanceScale: settings.drawDistanceScale * (0.7 + s * 0.3),
+    enableHighStageFx: s >= 0.55 && settings.enableHighStageFx,
+    enableGiantInsects: s >= 0.5 && settings.enableGiantInsects,
+    enableParticles: s >= 0.4 && settings.enableParticles,
+    enableCreatures: s >= 0.45 && settings.enableCreatures,
+    enableAtmosphere: s >= 0.42 && settings.enableAtmosphere,
+    bloom: s >= 0.7 && settings.bloom,
+    enablePostProcessing: s >= 0.65 && settings.enablePostProcessing,
+  };
+}
+
 export function scaledCount(base: number, multiplier: number): number {
   if (base <= 0) return 0;
   return Math.max(1, Math.round(base * multiplier));
 }
 
-/** Geometry segment helper */
 export function geoSeg(base: number, quality: number, min = 4): number {
   return Math.max(min, Math.round(base * quality));
+}
+
+/** @deprecated use detectStartupTier */
+export function detectDeviceTier(): QualityTier {
+  return detectStartupTier();
+}
+
+export function detectUltraLowDevice(): boolean {
+  return detectStartupTier() === "ultra_low";
 }

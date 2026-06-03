@@ -40,7 +40,16 @@ export function SceneDemandDriver() {
       return;
     }
 
-    const targetFps = ultraLow ? 12 : pumpActive ? 20 : 0;
+    const tier = usePerformanceStore.getState().tier;
+    const targetFps = ultraLow
+      ? 12
+      : tier === "low" || tier === "ultra_low"
+        ? 18
+        : pumpActive
+          ? tier === "ultra" || tier === "high"
+            ? 60
+            : 30
+          : 0;
     if (targetFps <= 0) return;
 
     const interval = 1000 / targetFps;

@@ -10,13 +10,12 @@ export function isDemandMode(): boolean {
 
 /** All animation useFrame / useCreatureFrame callbacks should bail when false. */
 export function shouldRunAnimationFrames(): boolean {
-  const perf = usePerformanceStore.getState();
-  if (!perf.isMobile) return true;
-
   const rt = useSceneRuntimeStore.getState();
   if (rt.sceneFrozen) return false;
   if (rt.isScrolling) return false;
   if (rt.uiInteracting) return false;
+
+  const perf = usePerformanceStore.getState();
   if (perf.settings().mobileStatic) return false;
 
   return rt.animationPumpActive;

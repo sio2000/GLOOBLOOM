@@ -7,38 +7,54 @@ import {
   OrbitControls,
   Stars,
   AdaptiveDpr,
-  PerformanceMonitor,
   Preload,
 } from "@react-three/drei";
+import {
+  EffectComposer,
+  Bloom,
+} from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { OrganismCore } from "./OrganismCore";
-import { BranchSystem } from "./BranchSystem";
-import { FlowerSystem } from "./FlowerSystem";
-import { ParticleField } from "./ParticleField";
-import { CreatureSystem } from "./CreatureSystem";
-import { AtmosphereSystem } from "./AtmosphereSystem";
-import { LeafSystem } from "./LeafSystem";
-import { WateringFlameSystem } from "./WateringFlameSystem";
-import { MajorBranchSystem } from "./MajorBranchSystem";
-import { GiantTrunkBranchSystem } from "./GiantTrunkBranchSystem";
-import { CrownBouquet } from "./CrownBouquet";
-import { GiantFlyingInsects } from "./GiantFlyingInsects";
-import { HighStageEffects } from "./HighStageEffects";
-import { RootMushroomSystem } from "./RootMushroomSystem";
-import { RootFeatherSystem } from "./RootFeatherSystem";
 import { useOrganismStore } from "@/store/useOrganismStore";
 import { useCameraStore } from "@/store/useCameraStore";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
-import { ExtendedStageSystems } from "./ExtendedStageSystems";
 import { getStageColor, Season } from "@/types/organism";
+import { MAX_ECOSYSTEM_STAGE } from "@/lib/stageConstants";
 import { getScales, getCameraLimits } from "@/lib/plantScale";
 import { scaledCount } from "@/lib/performance";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 import { MobileTouchPan } from "./MobileTouchPan";
 import { SceneDemandDriver } from "./SceneDemandDriver";
+import { AdaptivePerformanceMonitor } from "./AdaptivePerformanceMonitor";
+import { LazyWorldContent } from "./LazyWorldContent";
 import { requestSceneRender } from "@/lib/sceneRuntime";
+
+function PostProcessing({
+  stage,
+  enabled,
+  multisampling,
+}: {
+  stage: number;
+  enabled: boolean;
+  multisampling: number;
+}) {
+  if (!enabled) return null;
+  const bloomIntensity =
+    0.025 + Math.min(stage, MAX_ECOSYSTEM_STAGE) * 0.0015;
+  return (
+    <EffectComposer multisampling={multisampling}>
+      <Bloom
+        intensity={bloomIntensity}
+        luminanceThreshold={0.92}
+        luminanceSmoothing={0.85}
+        radius={0.28}
+        blendFunction={BlendFunction.ADD}
+      />
+    </EffectComposer>
+  );
+}
 
 function SceneLighting({
   stage,
@@ -135,12 +151,10 @@ function SceneLighting({
 function CameraRig({
   limits,
   isMobile,
-  isPhone,
   staticCamera,
 }: {
   limits: ReturnType<typeof getCameraLimits>;
   isMobile: boolean;
-  isPhone: boolean;
   staticCamera: boolean;
 }) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -201,12 +215,10 @@ function CameraRig({
 function CameraSetup({
   limits,
   isMobile,
-  isPhone,
   staticCamera,
 }: {
   limits: ReturnType<typeof getCameraLimits>;
   isMobile: boolean;
-  isPhone: boolean;
   staticCamera: boolean;
 }) {
   const { camera } = useThree();
@@ -223,76 +235,13 @@ function CameraSetup({
   }, [camera, limits.cameraY, limits.cameraZ, limits.fov, limits.fogFar]);
 
   return (
-    <CameraRig
-      limits={limits}
-      isMobile={isMobile}
-      isPhone={isPhone}
-      staticCamera={staticCamera}
-    />
-  );
-}
-
-function PerformanceController() {
-  const init = usePerformanceStore((s) => s.init);
-  const degrade = usePerformanceStore((s) => s.degrade);
-  const isMobile = usePerformanceStore((s) => s.isMobile);
-
-  useEffect(() => {
-    init();
-  }, [init]);
-
-  if (!isMobile) return null;
-
-  return (
-    <PerformanceMonitor flipflops={1} onDecline={degrade} onIncline={undefined} />
-  );
-}
-
-function LeafSystemBridge() {
-  const leaves = useOrganismStore((s) => s.leaves);
-  const stage = useOrganismStore((s) => s.state?.ecosystemStage ?? 1);
-  const growth = useOrganismStore((s) => s.state?.growth ?? 0);
-  return <LeafSystem leaves={leaves} stage={stage} growth={growth} />;
-}
-
-function MajorBranchBridge({
-  stage,
-  growth,
-  hydration,
-}: {
-  stage: number;
-  growth: number;
-  hydration: number;
-}) {
-  const leaves = useOrganismStore((s) => s.leaves);
-  return (
-    <MajorBranchSystem
-      stage={stage}
-      growth={growth}
-      hydration={hydration}
-      leaves={leaves}
-    />
-  );
-}
-
-function CreatureSystemBridge({ heightScale }: { heightScale: number }) {
-  const stage = useOrganismStore((s) => s.state?.ecosystemStage ?? 1);
-  const hydration = useOrganismStore((s) => s.state?.hydration ?? 0);
-  const growth = useOrganismStore((s) => s.state?.growth ?? 0);
-  const activeCreatures = useOrganismStore((s) => s.activeCreatures);
-  return (
-    <CreatureSystem
-      stage={stage}
-      hydration={hydration}
-      activeCreatures={activeCreatures}
-      heightScale={heightScale}
-      growth={growth}
-    />
+    <CameraRig limits={limits} isMobile={isMobile} staticCamera={staticCamera} />
   );
 }
 
 function SceneContent() {
   const state = useOrganismStore((s) => s.state);
+  const leaves = useOrganismStore((s) => s.leaves);
   const perf = usePerformanceStore((s) => s.settings());
   const device = useDeviceInfo();
 
@@ -306,6 +255,7 @@ function SceneContent() {
     isPortrait: device.isPortrait,
     isPhone: device.isPhone,
   });
+  const fogFar = cameraLimits.fogFar * perf.drawDistanceScale;
   const starCount = perf.enableStars
     ? Math.min(
         perf.maxStarCount,
@@ -316,10 +266,10 @@ function SceneContent() {
   return (
     <>
       <SceneDemandDriver />
+      <AdaptivePerformanceMonitor />
       <CameraSetup
         limits={cameraLimits}
         isMobile={device.isMobile}
-        isPhone={device.isPhone}
         staticCamera={perf.mobileStatic}
       />
       <SceneLighting
@@ -343,61 +293,32 @@ function SceneContent() {
         />
       )}
 
-      {perf.enableAtmosphere && (
-        <AtmosphereSystem
-          stage={stage}
-          season={season}
-          hydration={hydration}
-          decay={decay}
-        />
-      )}
+      <LazyWorldContent
+        stage={stage}
+        growth={growth}
+        decay={decay}
+        hydration={hydration}
+        season={season}
+        totalWaterings={totalWaterings}
+        widthScale={widthScale}
+        heightScale={heightScale}
+        leaves={leaves}
+      />
 
-      {perf.enableRootDecor && (
-        <>
-          <RootMushroomSystem
-            stage={stage}
-            growth={growth}
-            totalWaterings={totalWaterings}
-            hydration={hydration}
-          />
-          <RootFeatherSystem
-            stage={stage}
-            growth={growth}
-            totalWaterings={totalWaterings}
-            hydration={hydration}
-          />
-        </>
-      )}
+      <PostProcessing
+        stage={stage}
+        enabled={perf.enablePostProcessing}
+        multisampling={perf.bloomMultisampling}
+      />
 
-      <group position={[0, -0.3, 0]} scale={[widthScale, heightScale, widthScale]}>
-        <OrganismCore hydration={hydration} growth={growth} decay={decay} stage={stage} />
-        <BranchSystem stage={stage} growth={growth} hydration={hydration} decay={decay} />
-        <FlowerSystem stage={stage} hydration={hydration} growth={growth} />
-        <LeafSystemBridge />
-        <MajorBranchBridge stage={stage} growth={growth} hydration={hydration} />
-        <GiantTrunkBranchSystem stage={stage} growth={growth} hydration={hydration} />
-        <CrownBouquet stage={stage} hydration={hydration} growth={growth} />
-        {perf.enableExtendedStage && (
-          <ExtendedStageSystems stage={stage} growth={growth} hydration={hydration} />
-        )}
-      </group>
-
-      {perf.enableWateringFlames && (
-        <WateringFlameSystem stage={stage} growth={growth} />
-      )}
-      {perf.enableParticles && (
-        <ParticleField
-          stage={stage}
-          hydration={hydration}
-          season={season}
-          growth={growth}
-        />
-      )}
-      {perf.enableCreatures && <CreatureSystemBridge heightScale={heightScale} />}
-      {perf.enableGiantInsects && (
-        <GiantFlyingInsects stage={stage} growth={growth} />
-      )}
-      {perf.enableHighStageFx && <HighStageEffects stage={stage} growth={growth} />}
+      <fog
+        attach="fog"
+        args={[
+          getStageColor(stage).fog,
+          cameraLimits.fogNear,
+          fogFar,
+        ]}
+      />
     </>
   );
 }
@@ -410,6 +331,7 @@ export function GloobloomScene() {
   const perf = usePerformanceStore((s) => s.settings());
   const initPerf = usePerformanceStore((s) => s.init);
   const demandMode = usePerformanceStore((s) => s.demandMode);
+  const tier = usePerformanceStore((s) => s.tier);
   const device = useDeviceInfo();
   const sceneFrozen = useSceneRuntimeStore((s) => s.sceneFrozen);
   const fogColor = getStageColor(stage ?? 1).fog;
@@ -427,7 +349,7 @@ export function GloobloomScene() {
 
   useEffect(() => {
     requestSceneRender();
-  }, [stage, growth, sceneFrozen, frameloop]);
+  }, [stage, growth, sceneFrozen, frameloop, tier]);
 
   return (
     <div ref={containerRef} className="fixed inset-0 w-full h-[100dvh] touch-none">
@@ -445,7 +367,10 @@ export function GloobloomScene() {
         gl={{
           antialias: perf.antialias,
           alpha: false,
-          powerPreference: device.isMobile ? "low-power" : "high-performance",
+          powerPreference:
+            tier === "ultra_low" || tier === "low"
+              ? "low-power"
+              : "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.8,
           stencil: false,
@@ -454,15 +379,9 @@ export function GloobloomScene() {
         scene={{ background: new THREE.Color(fogColor) }}
       >
         <AdaptiveDpr pixelated />
-        <PerformanceController />
-        <fog
-          attach="fog"
-          args={[fogColor, cameraLimits.fogNear, cameraLimits.fogFar]}
-        />
-
         <Suspense fallback={null}>
           <SceneContent />
-          {!device.isMobile && <Preload all />}
+          {tier === "ultra" || tier === "high" ? <Preload all /> : null}
         </Suspense>
       </Canvas>
     </div>
