@@ -91,7 +91,7 @@ export function computeMobileTrunkWalk(
   yMin: number,
   yMax: number
 ): TrunkWalkState {
-  const cycle = ((elapsed * speed * 0.078) + phase) % 1;
+  const cycle = ((elapsed * speed * 0.088) + phase) % 1;
   const direction: 1 | -1 = cycle < 0.5 ? 1 : -1;
   const span = yMax - yMin;
   const t = cycle < 0.5 ? cycle * 2 : (cycle - 0.5) * 2;

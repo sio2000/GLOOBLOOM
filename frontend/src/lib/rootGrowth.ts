@@ -86,6 +86,28 @@ export function getRootDecorWorldHeight(
   return getRootDecorHeightMeters(totalWaterings, stage) / METERS_PER_WORLD_UNIT;
 }
 
+/** Local-group scale from a target world-space decor height (÷ heightScale). */
+function rootDecorScaleLocal(
+  totalWaterings: number,
+  stage: number,
+  growth: number,
+  plantFraction: number
+): number {
+  const { worldHeight, heightScale } = getPlantWorldBounds(stage, growth);
+  const plantM = getPlantHeightMeters(stage, growth);
+  const plantRatio = Math.min(1, plantM / MAX_PLANT_HEIGHT_M);
+  const waterM = getRootDecorHeightMeters(totalWaterings, stage, growth);
+  const waterRatio = Math.min(1, waterM / MAX_ROOT_DECOR_HEIGHT_M);
+  const progress = Math.min(1, Math.max(plantRatio * 0.92, waterRatio * 0.75));
+
+  const maxWorld =
+    (worldHeight * plantFraction) / ROOT_DECOR_MAX_HEIGHT_MUL;
+  const minWorld = Math.max(0.35 / heightScale, maxWorld * 0.12);
+  const grownWorld = minWorld + progress * (maxWorld - minWorld);
+
+  return Math.max(0.03, grownWorld / Math.max(heightScale, 0.01));
+}
+
 /** Per-mushroom mesh scale — capped to plant fraction (never trunk-radius driven). */
 export function getCappedRootMushroomScale(
   totalWaterings: number,
@@ -93,7 +115,18 @@ export function getCappedRootMushroomScale(
   growth: number,
   heightMul: number
 ): number {
-  return Math.max(0.04, getRootDecorWorldHeight(totalWaterings, stage, growth) * heightMul);
+  return rootDecorScaleLocal(totalWaterings, stage, growth, ROOT_DECOR_PLANT_FRACTION) * heightMul;
+}
+
+/** Mobile static root toadstools — half the desktop cap, plateau at max (no further growth). */
+export function getMobileStaticMushroomScale(
+  totalWaterings: number,
+  stage: number,
+  growth: number,
+  heightMul: number
+): number {
+  const MOBILE_MUSHROOM_PLANT_FRACTION = ROOT_DECOR_PLANT_FRACTION * 0.5;
+  return rootDecorScaleLocal(totalWaterings, stage, growth, MOBILE_MUSHROOM_PLANT_FRACTION) * heightMul;
 }
 
 export interface RootPlacementDef {

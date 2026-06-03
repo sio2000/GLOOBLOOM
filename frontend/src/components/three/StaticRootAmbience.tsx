@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { getStageColor } from "@/types/organism";
 import { getTrunkMetrics } from "@/lib/plantScale";
-import { getCappedRootMushroomScale } from "@/lib/rootGrowth";
+import { getMobileStaticMushroomScale } from "@/lib/rootGrowth";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { geoSeg } from "@/lib/performance";
 import { requestSceneRender } from "@/lib/sceneRuntime";
@@ -288,7 +288,7 @@ export function StaticRootAmbience({
       },
     ].map((m) => ({
       ...m,
-      scale: getCappedRootMushroomScale(totalWaterings, stage, growth, m.heightMul),
+      scale: getMobileStaticMushroomScale(totalWaterings, stage, growth, m.heightMul),
     }));
   }, [minimalFlame, rootY, trunk.trunkRadiusBottom, totalWaterings, stage, growth]);
 

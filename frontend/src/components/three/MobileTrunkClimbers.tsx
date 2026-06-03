@@ -18,7 +18,7 @@ interface Props {
   growth: number;
 }
 
-/** Four ladybugs + four caterpillars — same visual weight as flying insects. */
+/** Four ladybugs + three caterpillars — same visual weight as flying insects. */
 export function MobileTrunkClimbers({ stage, growth }: Props) {
   const trunk = useMemo(() => getTrunkMetrics(stage, growth), [stage, growth]);
 
@@ -48,25 +48,19 @@ export function MobileTrunkClimbers({ stage, growth }: Props) {
         angle: trunkLaneAngle(CATERPILLAR_LANES[0]!),
         seed: 5.7,
         pattern: 0 as const,
-        speed: 0.22,
+        speed: 0.3,
       },
       {
         angle: trunkLaneAngle(CATERPILLAR_LANES[1]!),
         seed: 8.2,
         pattern: 1 as const,
-        speed: 0.228,
+        speed: 0.31,
       },
       {
         angle: trunkLaneAngle(CATERPILLAR_LANES[2]!),
         seed: 11.3,
         pattern: 2 as const,
-        speed: 0.215,
-      },
-      {
-        angle: trunkLaneAngle(4),
-        seed: 14.6,
-        pattern: 0 as const,
-        speed: 0.22,
+        speed: 0.3,
       },
     ],
     []
