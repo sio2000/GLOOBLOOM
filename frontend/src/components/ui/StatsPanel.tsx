@@ -20,9 +20,6 @@ export function StatsPanel() {
   const expanded = useOrganismStore((s) => s.mobileStatsExpanded);
   const toggleMobilePanel = useOrganismStore((s) => s.toggleMobilePanel);
   const mobileDevOpen = useOrganismStore((s) => s.mobileDevOpen);
-  const showLore = useOrganismStore((s) => s.showLoreSheet);
-  const mobilePanelHidden = mobileDevOpen || showLore;
-  const mobileDevOpen = useOrganismStore((s) => s.mobileDevOpen);
   const showLoreSheet = useOrganismStore((s) => s.showLoreSheet);
   const hideMobileSummary = mobileDevOpen || showLoreSheet;
 
