@@ -6,9 +6,7 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { LeafData } from "@/types/organism";
 import { filterTrunkLeaves } from "@/lib/majorBranches";
-import { getMaxNamedLeaves } from "@/lib/mobilePerf";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
-import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 
 interface Props {
   leaves: LeafData[];
@@ -115,12 +113,9 @@ function NameLeaf({ leaf, showLabel = true }: { leaf: LeafData; showLabel?: bool
 }
 
 export function LeafSystem({ leaves, stage = 1, growth = 0 }: Props) {
-  const tier = usePerformanceStore((s) => s.tier);
-  const device = useDeviceInfo();
+  const labelCap = usePerformanceStore((s) => s.settings().labelsMax);
   const trunkLeaves = filterTrunkLeaves(leaves, stage, growth);
   if (!trunkLeaves.length) return null;
-
-  const labelCap = getMaxNamedLeaves(tier, device.isPhone);
 
   return (
     <group>

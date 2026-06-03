@@ -2,8 +2,8 @@
 
 import type { QualityTier } from "@/lib/performance";
 
-export const MOBILE_WS_STATE_THROTTLE_MS = 350;
-export const MOBILE_WS_LEAVES_THROTTLE_MS = 500;
+export const MOBILE_WS_STATE_THROTTLE_MS = 600;
+export const MOBILE_WS_LEAVES_THROTTLE_MS = 800;
 export const MOBILE_RESIZE_DEBOUNCE_MS = 180;
 
 export function isMobileRuntime(): boolean {

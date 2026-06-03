@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useFrame, type RootState } from "@react-three/fiber";
 import { withAnimClock } from "@/lib/animClock";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { shouldRunAnimationFrames, requestSceneRender } from "@/lib/sceneRuntime";
 
 /** useFrame with hardware-adaptive animation speed — throttled on weak/mobile devices. */
 export function useAdaptiveFrame(
@@ -11,7 +12,10 @@ export function useAdaptiveFrame(
   const accumDelta = useRef(0);
 
   useFrame((state, delta) => {
+    if (!shouldRunAnimationFrames()) return;
+
     const { frameSkip, animTimeScale } = usePerformanceStore.getState().settings();
+    if (frameSkip >= 999) return;
     accumDelta.current += delta;
     counter.current += 1;
     if (frameSkip > 1 && counter.current % frameSkip !== 0) return;
@@ -19,5 +23,6 @@ export function useAdaptiveFrame(
     const scaledDelta = accumDelta.current * animTimeScale;
     accumDelta.current = 0;
     callback(withAnimClock(state, animTimeScale), scaledDelta);
+    if (usePerformanceStore.getState().demandMode) requestSceneRender();
   });
 }

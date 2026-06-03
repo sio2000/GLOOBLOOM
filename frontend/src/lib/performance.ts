@@ -27,7 +27,42 @@ export interface QualitySettings {
   geoQuality: number;
   /** Scale animation time — slower motion on weak devices, same scene content */
   animTimeScale: number;
+  /** Mobile demand frameloop — desktop always false */
+  demandMode: boolean;
+  ultraLow: boolean;
+  /** Skip all animated useFrame work */
+  mobileStatic: boolean;
+  enablePostProcessing: boolean;
+  enableCreatures: boolean;
+  enableParticles: boolean;
+  enableAtmosphere: boolean;
+  enableHighStageFx: boolean;
+  enableGiantInsects: boolean;
+  enableStars: boolean;
+  enableExtendedStage: boolean;
+  enableRootDecor: boolean;
+  enableWateringFlames: boolean;
+  maxStarCount: number;
+  labelsMax: number;
 }
+
+const DESKTOP_DEFAULTS = {
+  demandMode: false,
+  ultraLow: false,
+  mobileStatic: false,
+  enablePostProcessing: true,
+  enableCreatures: true,
+  enableParticles: true,
+  enableAtmosphere: true,
+  enableHighStageFx: true,
+  enableGiantInsects: true,
+  enableStars: true,
+  enableExtendedStage: true,
+  enableRootDecor: true,
+  enableWateringFlames: true,
+  maxStarCount: 8000,
+  labelsMax: 100,
+} as const;
 
 const TIER_ORDER: QualityTier[] = ["low", "medium", "high"];
 
@@ -51,6 +86,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     pollenMultiplier: 0.45,
     geoQuality: 0.45,
     animTimeScale: 0.38,
+    ...DESKTOP_DEFAULTS,
   },
   medium: {
     tier: "medium",
@@ -71,6 +107,7 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     pollenMultiplier: 0.7,
     geoQuality: 0.72,
     animTimeScale: 0.68,
+    ...DESKTOP_DEFAULTS,
   },
   high: {
     tier: "high",
@@ -91,8 +128,19 @@ export const QUALITY_SETTINGS: Record<QualityTier, QualitySettings> = {
     pollenMultiplier: 1,
     geoQuality: 1,
     animTimeScale: 1,
+    ...DESKTOP_DEFAULTS,
   },
 };
+
+export function detectUltraLowDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  const cores = navigator.hardwareConcurrency ?? 8;
+  const ua = navigator.userAgent;
+  const oldIphone = /iPhone OS (1[0-4]|[0-9])_/.test(ua);
+  const androidMid = /Android/i.test(ua) && (memory <= 4 || cores <= 6);
+  return memory < 6 || oldIphone || androidMid;
+}
 
 export function detectDeviceTier(): QualityTier {
   if (typeof window === "undefined") return "medium";

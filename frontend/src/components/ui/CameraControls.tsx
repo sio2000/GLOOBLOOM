@@ -88,9 +88,9 @@ export function CameraControls() {
       };
       tick();
       stopRepeat();
-      intervalRef.current = setInterval(tick, 100);
+      intervalRef.current = setInterval(tick, device.isPhone ? 220 : 100);
     },
-    [limits.panRange, limits.panStep, nudgeDown, nudgeUp, stopRepeat]
+    [device.isPhone, limits.panRange, limits.panStep, nudgeDown, nudgeUp, stopRepeat]
   );
 
   useEffect(() => stopRepeat, [stopRepeat]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useOrganismStore } from "@/store/useOrganismStore";
@@ -19,6 +19,9 @@ import { AudioToggle } from "@/components/ui/AudioToggle";
 import { TitleSplash } from "@/components/ui/TitleSplash";
 import { PaymentReturnHandler } from "@/components/ui/PaymentReturnHandler";
 import { ADMIN_SECRET } from "@/lib/constants";
+import { getDeviceViewport } from "@/lib/device";
+import { usePerformanceStore } from "@/store/usePerformanceStore";
+import { useMobileSceneFreeze } from "@/hooks/useMobileSceneFreeze";
 
 const WaterModal = dynamic(
   () => import("@/components/ui/WaterModal").then((m) => m.WaterModal),
@@ -70,15 +73,25 @@ function GloobloomApp() {
   const showNotif = useOrganismStore((s) => s.showNotif);
   const { updateMood } = useAudioSystem();
   const state = useOrganismStore((s) => s.state);
+  const [sceneReady, setSceneReady] = useState(false);
 
   useSocket();
+  useMobileSceneFreeze();
 
   const searchParams = useSearchParams();
   const adminKey = searchParams.get("admin");
   const isAdmin = adminKey === ADMIN_SECRET && ADMIN_SECRET.length > 0;
 
   useEffect(() => {
+    usePerformanceStore.getState().init();
+  }, []);
+
+  useEffect(() => {
     async function bootstrap() {
+      const mobile = getDeviceViewport().isMobile;
+      const minLoadMs = mobile ? 900 : 400;
+      const started = Date.now();
+
       try {
         const [orgState, leaves, activities] = await Promise.all([
           api.getState(),
@@ -88,13 +101,26 @@ function GloobloomApp() {
         setState(orgState);
         setLeaves(leaves);
         activities.forEach(addActivity);
+        setIsLoading(true);
       } catch {
         showNotif(
           "Could not reach the Gloobloom server. Check that the Render API is running.",
           "decay"
         );
         setIsLoading(false);
+        setSceneReady(true);
+        return;
       }
+
+      const elapsed = Date.now() - started;
+      const wait = Math.max(0, minLoadMs - elapsed);
+      window.setTimeout(() => {
+        setIsLoading(false);
+        window.setTimeout(
+          () => setSceneReady(true),
+          mobile ? 450 : 80
+        );
+      }, wait);
     }
     bootstrap();
   }, [addActivity, setIsLoading, setLeaves, setState, showNotif]);
@@ -117,12 +143,17 @@ function GloobloomApp() {
   return (
     <main className="relative w-screen h-[100dvh] overflow-hidden no-select">
       {/* 3D — own layer so touch gestures reach OrbitControls */}
-      <div className="fixed inset-0 z-0 touch-none">
-        <GloobloomScene />
-      </div>
+      {sceneReady && (
+        <div className="fixed inset-0 z-0 touch-none">
+          <GloobloomScene />
+        </div>
+      )}
 
       {/* UI overlay — interactive controls only */}
-      <div className="absolute inset-0 pointer-events-none z-20 max-sm:[contain:strict]">
+      <div
+        data-ui-layer
+        className="absolute inset-0 pointer-events-none z-20 max-sm:[contain:strict]"
+      >
         <div className="pointer-events-auto">
           <StatsPanel />
         </div>
@@ -166,7 +197,7 @@ function GloobloomApp() {
       <WaterModal />
       <LeafModal />
       <NotificationToast />
-      <LoadingScreen isLoading={isLoading} />
+      <LoadingScreen isLoading={isLoading || !sceneReady} />
       <MobileBottomDock />
     </main>
   );

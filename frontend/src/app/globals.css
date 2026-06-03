@@ -72,6 +72,14 @@ body {
   }
 }
 
+/* Mobile: kill decorative CSS loops — UI transitions stay on compositor */
+@media (max-width: 640px) {
+  .text-shimmer,
+  .glow-pulse {
+    animation: none;
+  }
+}
+
 /* Shimmer text */
 .text-shimmer {
   background: linear-gradient(

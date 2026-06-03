@@ -5,6 +5,7 @@ import { useOrganismStore } from "@/store/useOrganismStore";
 import { useCameraStore } from "@/store/useCameraStore";
 import { getCameraLimits } from "@/lib/plantScale";
 import { useDeviceInfo } from "@/hooks/useDeviceInfo";
+import { requestSceneRender } from "@/lib/sceneRuntime";
 
 interface Props {
   containerRef: RefObject<HTMLElement | null>;
@@ -68,6 +69,7 @@ export function MobileTouchPan({ containerRef }: Props) {
         const dy = lastMidY - y;
         lastMidY = y;
         shiftViewOffsetY(dy * sensitivity, panRange);
+        requestSceneRender();
         e.preventDefault();
         return;
       }
@@ -82,6 +84,7 @@ export function MobileTouchPan({ containerRef }: Props) {
         edgeLastY = t.clientY;
         if (Math.abs(dy) > 0.5) {
           shiftViewOffsetY(dy * sensitivity, panRange);
+          requestSceneRender();
           e.preventDefault();
         }
       }

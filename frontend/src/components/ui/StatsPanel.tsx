@@ -13,8 +13,10 @@ import { formatPlantHeight, formatPlantWeight, getPlantHeightMeters, getPlantWei
 import { getLifeTier, getVitalityColor } from "@/lib/vitality";
 import { LORE_ITEMS } from "@/components/ui/LoreSheet";
 import { MobilePanelToggle } from "@/components/ui/MobilePanelToggle";
+import { useDeviceInfo } from "@/hooks/useDeviceInfo";
 
 export function StatsPanel() {
+  const { isMobile } = useDeviceInfo();
   const state = useOrganismStore((s) => s.state);
   const onlineCount = useOrganismStore((s) => s.onlineCount);
   const expanded = useOrganismStore((s) => s.mobileStatsExpanded);
@@ -86,7 +88,7 @@ export function StatsPanel() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.28 }}
+                  transition={{ duration: isMobile ? 0.12 : 0.28 }}
                 >
                   <div className="pt-3 mt-3 border-t border-white/8 max-h-[min(46dvh,320px)] overflow-y-auto overscroll-contain scrollbar-hide">
                     <MobileStatsAccordion
