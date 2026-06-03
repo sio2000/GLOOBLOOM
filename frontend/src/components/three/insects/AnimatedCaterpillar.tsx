@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import * as THREE from "three";
-import { useThrottledFrame } from "@/hooks/useThrottledFrame";
+import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import { getTrunkMetrics } from "@/lib/plantScale";
 import {
   computeNaturalTrunkWalk,
@@ -38,7 +38,7 @@ export function AnimatedCaterpillar({
   const phase = (seed * 0.17) % 1;
   const surfaceOffset = 0.012 * scale;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const elapsed = clock.elapsedTime;
     const walk = midPause
@@ -65,7 +65,7 @@ export function AnimatedCaterpillar({
       bodyRef.current.position.y =
         Math.abs(Math.sin(walk.stepPhase * 2.2)) * 0.003 * scale * walk.moveAmount;
     }
-  });
+  }, seed);
 
   return (
     <group ref={ref} scale={scale}>

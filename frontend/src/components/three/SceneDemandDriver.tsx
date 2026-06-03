@@ -43,7 +43,7 @@ export function SceneDemandDriver() {
         invalidate();
         return;
       }
-      const creatureFps = ultraLow ? 10 : 14;
+      const creatureFps = ultraLow ? 14 : 18;
       const interval = 1000 / creatureFps;
       const loop = (now: number) => {
         if (now - lastTick.current >= interval && shouldRunCreatureFrames()) {

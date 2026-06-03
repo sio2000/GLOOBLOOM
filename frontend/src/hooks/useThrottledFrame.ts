@@ -13,8 +13,9 @@ export function useThrottledFrame(
 
   useFrame((state, delta) => {
     if (!shouldRunAnimationFrames()) return;
-    const { frameSkip, animTimeScale } = usePerformanceStore.getState().settings();
-    if (frameSkip >= 999) return;
+    const { frameSkip, animTimeScale, mobileStatic } =
+      usePerformanceStore.getState().settings();
+    if (mobileStatic || frameSkip >= 999 || animTimeScale <= 0) return;
     accumDelta.current += delta;
     counter.current += 1;
     if (counter.current % frameSkip !== 0) return;

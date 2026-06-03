@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import * as THREE from "three";
-import { useThrottledFrame } from "@/hooks/useThrottledFrame";
+import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 const LADYBUG_RED = "#c62828";
 const LADYBUG_DARK = "#1a1010";
 const LADYBUG_SPOT = "#0d0d0d";
@@ -87,7 +87,7 @@ export function CaterpillarMesh({
 }) {
   const segmentsRef = useRef<(THREE.Group | null)[]>([]);
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     const t = clock.elapsedTime;
     const pace = slow ? 0.35 : 1;
     const waveSpeed = (pattern === 0 ? 3.2 : pattern === 1 ? 5.8 : 2.4) * pace;
@@ -103,7 +103,7 @@ export function CaterpillarMesh({
         seg.position.x = i * SEGMENT_SPACING + Math.max(0, Math.sin(phase)) * 0.003;
       }
     });
-  });
+  }, pattern);
 
   return (
     <group scale={scale}>

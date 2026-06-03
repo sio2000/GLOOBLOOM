@@ -20,7 +20,6 @@ import {
 } from "./TrunkClimberCreatures";
 import { AnimatedCaterpillar } from "./insects/AnimatedCaterpillar";
 import { useCreatureFrame } from "@/hooks/useCreatureFrame";
-import { useThrottledFrame } from "@/hooks/useThrottledFrame";
 import { applyPlantAvoidance, buildPlantFlightBounds } from "@/lib/plantFlightAvoidance";
 import { usePerformanceStore } from "@/store/usePerformanceStore";
 
@@ -107,7 +106,7 @@ function RootSpider({
   seed: number;
 }) {
   const ref = useRef<THREE.Group>(null);
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const t = clock.elapsedTime * 0.4 + seed;
     ref.current.position.set(
@@ -115,7 +114,7 @@ function RootSpider({
       baseY + 0.05 * scale + Math.sin(t) * 0.02 * scale,
       Math.sin(angle) * dist + Math.cos(t * 2) * 0.04 * scale
     );
-  });
+  }, seed);
 
   return (
     <group ref={ref} scale={scale}>

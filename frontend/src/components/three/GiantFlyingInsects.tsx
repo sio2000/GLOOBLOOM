@@ -549,7 +549,7 @@ export function GiantFlyingInsects({ stage, growth }: Props) {
 
   const showGiant = (index: number) => {
     if (index === 0) return true;
-    if (mobileLite) return index < 4;
+    if (mobileLite) return index < 7;
     if (device.isPhone) return index % 2 === 0;
     if (insectMul < 0.85) return index % 2 === 0;
     return true;

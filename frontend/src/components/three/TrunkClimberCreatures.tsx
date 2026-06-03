@@ -2,7 +2,7 @@
 
 import { useRef, type RefObject } from "react";
 import * as THREE from "three";
-import { useThrottledFrame } from "@/hooks/useThrottledFrame";
+import { useCreatureFrame } from "@/hooks/useCreatureFrame";
 import { getTrunkMetrics } from "@/lib/plantScale";
 import { computeNaturalTrunkWalk, trunkRadiusAt } from "@/lib/trunkWalker";
 import {
@@ -39,7 +39,7 @@ function useTrunkWalk(props: ClimberProps) {
   const phase = seeded(seed, 0) * 0.85;
   const surfaceOffset = 0.014 * scale;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const walk = computeNaturalTrunkWalk(clock.elapsedTime, speed, phase, yMin, yMax);
 
@@ -68,7 +68,7 @@ function useTrunkWalk(props: ClimberProps) {
       bodyRef.current.position.y =
         Math.abs(Math.sin(walk.stepPhase * 2)) * 0.0025 * scale;
     }
-  });
+  }, seed);
 
   return { ref, bodyRef, orientRef };
 }
@@ -143,7 +143,7 @@ export function TrunkButterflyClimber({
   const phase = seeded(props.seed, 0) * 0.85;
   const surfaceOffset = 0.014 * props.scale;
 
-  useThrottledFrame(({ clock }) => {
+  useCreatureFrame(({ clock }) => {
     if (!ref.current) return;
     const walk = computeNaturalTrunkWalk(
       clock.elapsedTime,
@@ -179,7 +179,7 @@ export function TrunkButterflyClimber({
       bodyRef.current.rotation.x =
         walk.direction * stride + Math.sin(walk.stepPhase * 1.4) * 0.03;
     }
-  });
+  }, props.seed);
 
   return (
     <group ref={ref}>

@@ -69,7 +69,17 @@ function buildSettings(
 ): QualitySettings {
   let s = applyDynamicScale(getQualitySettings(tier), dynamicScale);
   if (isMobile && tierIndex(s.tier) <= tierIndex("low")) {
-    s = { ...s, demandMode: true };
+    s = {
+      ...s,
+      demandMode: true,
+      mobileStatic: true,
+      frameSkip: 999,
+      animTimeScale: 0,
+      enableParticles: false,
+      enableAtmosphere: false,
+      enableHighStageFx: false,
+      enableWateringFlames: false,
+    };
   }
   return s;
 }
