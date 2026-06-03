@@ -69,6 +69,7 @@ export function createPaymentsRouter(payments: StripePaymentService): Router {
         message: parsed.data.message?.trim(),
         quantity: parsed.data.quantity,
         checkoutMode: parsed.data.checkoutMode,
+        origin: req.get("origin") ?? undefined,
       });
       res.json({ success: true, data: session });
     } catch (err) {

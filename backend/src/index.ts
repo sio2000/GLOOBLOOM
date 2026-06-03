@@ -3,7 +3,7 @@ import { createServer } from "http";
 import express from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
-import { getCorsOrigins } from "./lib/corsOrigins.js";
+import { corsOriginDelegate } from "./lib/corsOrigins.js";
 import { OrganismService } from "./services/OrganismService.js";
 import { WebSocketService } from "./services/WebSocketService.js";
 import { DashboardService } from "./services/DashboardService.js";
@@ -12,7 +12,6 @@ import { createOrganismRouter } from "./routes/organism.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createPaymentsRouter } from "./routes/payments.js";
 const PORT = parseInt(process.env.PORT ?? "4000");
-const corsOrigins = getCorsOrigins();
 
 async function bootstrap() {
   const prisma = new PrismaClient({
@@ -26,7 +25,7 @@ async function bootstrap() {
 
   app.use(
     cors({
-      origin: corsOrigins,
+      origin: corsOriginDelegate,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })

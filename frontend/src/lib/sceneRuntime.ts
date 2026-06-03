@@ -4,23 +4,37 @@ import { usePerformanceStore } from "@/store/usePerformanceStore";
 import { useSceneRuntimeStore } from "@/store/useSceneRuntimeStore";
 import { useOrganismStore } from "@/store/useOrganismStore";
 
-const MOBILE_RENDER_MIN_MS = 95;
-const MOBILE_INTERACT_RENDER_MIN_MS = 150;
+// Minimum gap between demand-renders. This is a *cap* on fps, not a floor — a
+// slow device that takes longer than this to render simply renders slower, so
+// the cadence self-adapts to the hardware. Targets ~30fps so insects fly
+// smoothly; ultra_low phones get a gentler cap to stay safe.
+const MOBILE_CREATURE_RENDER_MS = 33;
+const MOBILE_CREATURE_RENDER_MS_ULTRA_LOW = 44;
+// Camera pan/zoom redraws the moving viewpoint over the whole scene (heavier),
+// so cap it a touch lower-fps than free-flying insects.
+const MOBILE_INTERACT_RENDER_MIN_MS = 66;
 let lastMobileRenderMs = 0;
 let mobileRenderTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Base creature-render cap for the active tier. */
+function mobileBaseRenderMs(): number {
+  return usePerformanceStore.getState().tier === "ultra_low"
+    ? MOBILE_CREATURE_RENDER_MS_ULTRA_LOW
+    : MOBILE_CREATURE_RENDER_MS;
+}
 
 /**
  * Each demand-render redraws the whole scene, which gets much heavier past
  * stage 100. Stretching the minimum gap between renders (a few fps) at high
- * stages cuts that per-frame GPU cost without touching the plant or any
- * creature behaviour — the scene just refreshes slightly less often.
+ * stages keeps the per-frame GPU cost in check on phones — without touching the
+ * plant or any creature behaviour — so the device stays smooth as it grows.
  */
 function highStageRenderRelaxMs(): number {
   const stage = useOrganismStore.getState().state?.ecosystemStage ?? 1;
-  if (stage >= 300) return 70;
-  if (stage >= 200) return 50;
-  if (stage >= 150) return 35;
-  if (stage >= 100) return 22;
+  if (stage >= 300) return 60;
+  if (stage >= 200) return 42;
+  if (stage >= 150) return 28;
+  if (stage >= 100) return 16;
   return 0;
 }
 
@@ -89,7 +103,7 @@ export function requestSceneRender(force = false): void {
   const minMs =
     (isCameraInteracting()
       ? MOBILE_INTERACT_RENDER_MIN_MS
-      : MOBILE_RENDER_MIN_MS) + relax;
+      : mobileBaseRenderMs()) + relax;
   const now = performance.now();
   const elapsed = now - lastMobileRenderMs;
 

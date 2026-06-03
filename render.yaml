@@ -19,8 +19,11 @@ services:
         value: 4000
       - key: DATABASE_URL
         value: file:./prisma/prod.db
+      # Canonical site URL(s). Comma-separated list allowed. Any *.netlify.app
+      # origin is accepted automatically (see lib/corsOrigins.ts), so rotating
+      # Netlify URLs no longer break CORS — keep the primary one first.
       - key: FRONTEND_URL
-        value: https://aesthetic-sprite-583fdb.netlify.app
+        value: https://regal-pika-842773.netlify.app,https://aesthetic-sprite-583fdb.netlify.app
       - key: ADMIN_SECRET
         value: gloobloom-admin-secret-change-me
       - key: ADMIN_PANEL_PASSWORD

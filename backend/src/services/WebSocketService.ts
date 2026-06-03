@@ -1,7 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import { OrganismService } from "./OrganismService.js";
-import { getCorsOrigins } from "../lib/corsOrigins.js";
+import { corsOriginDelegate } from "../lib/corsOrigins.js";
 import { ClientToServerEvents, ServerToClientEvents } from "../types/index.js";
 import { isPaymentGateActive } from "../lib/requirePayments.js";
 
@@ -24,7 +24,7 @@ export class WebSocketService {
   constructor(httpServer: HttpServer, private organism: OrganismService) {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: getCorsOrigins(),
+        origin: corsOriginDelegate,
         methods: ["GET", "POST"],
         credentials: true,
       },

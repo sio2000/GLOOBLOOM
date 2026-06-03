@@ -121,9 +121,11 @@ function buildSettings(
       enableCreatures: false,
       enableGiantInsects: true,
       insectMultiplier: 0.08,
-      // Update flying creatures every frame (ultra_low: every 2nd) so motion
-      // reads as continuous flight instead of the old stuttery skip-stepping.
-      creatureFrameSkip: ultra ? 2 : 1,
+      // Advance flight on every demand-render — the render cadence itself
+      // (sceneRuntime) governs the rate, so motion stays continuous instead of
+      // skip-stepping. Weak devices are protected by a slower render cap, not by
+      // dropping creature frames (which is what made flight look choppy).
+      creatureFrameSkip: 1,
       creatureMultiplier: 0,
       enableStars: true,
       maxStarCount: Math.min(s.maxStarCount, ultra ? 128 : 168),

@@ -16,6 +16,7 @@ import {
 } from "../constants/payments.js";
 import { formatStripeError } from "../lib/stripeErrors.js";
 import { resolveStripePublishableKey } from "../lib/stripeKeys.js";
+import { getPrimaryFrontendUrl, isAllowedOrigin } from "../lib/corsOrigins.js";
 
 export class StripePaymentService {
   private secretKey: string | null = null;
@@ -64,6 +65,7 @@ export class StripePaymentService {
     message?: string;
     quantity?: number;
     checkoutMode?: "embedded" | "hosted";
+    origin?: string;
   }): Promise<{ clientSecret?: string; sessionId: string; url?: string }> {
     if (!this.secretKey) {
       throw new Error("Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
@@ -72,10 +74,13 @@ export class StripePaymentService {
     const quantity =
       input.action === "comment" ? 1 : clampPurchaseQuantity(input.quantity ?? 1);
     const amount = totalAmountCents(input.action, quantity);
-    const frontendUrl = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(
-      /\/$/,
-      ""
-    );
+    // Return the user to whatever (allowed) origin they paid from — across
+    // rotating Netlify URLs — falling back to the configured FRONTEND_URL.
+    const frontendUrl = (
+      (input.origin && isAllowedOrigin(input.origin)
+        ? input.origin
+        : getPrimaryFrontendUrl())
+    ).replace(/\/+$/, "");
 
     let sessionId: string;
     let clientSecret: string | undefined;
